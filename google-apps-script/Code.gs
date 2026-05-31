@@ -1,5 +1,7 @@
 const CONFIG = {
-  questionsSheetName: "Questions",
+  // Note: there is no longer a single "Questions" sheet.
+  // Each subject for a class lives in its own tab named after the subject
+  // (e.g. "Science", "Maths", "English", "Hindi", "Social Science").
   chaptersSheetName: "Chapters",
   generatedPapersSheetName: "Generated Papers",
   schoolName: "Scholars Academic Home",
@@ -82,6 +84,7 @@ function doPost(event) {
     return jsonResponse({ ok: false, error: "Unauthorized: Invalid passcode" });
   }
   if (body.action === "recordPaper") return jsonResponse(recordPaper(body.payload));
+  if (body.action === "flagQuestion") return jsonResponse(flagQuestion(body.payload));
   return jsonResponse({ ok: false, error: "Unknown action" });
 }
 
@@ -98,17 +101,31 @@ function jsonResponse(value) {
 }
 
 function getQuestionBank() {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(CONFIG.questionsSheetName);
-  if (!sheet) throw new Error(`Missing sheet: ${CONFIG.questionsSheetName}`);
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return emptyBank();
+  const ss = SpreadsheetApp.getActive();
 
-  const headers = values[0].map(String);
-  const rows = values.slice(1);
-  const questions = rows
-    .map((row, index) => rowToQuestion(headers, row, index + 2))
-    .filter((q) => q.id && q.useInPapers !== "No");
-  const chapters = mergeChapters(readChaptersSheet(), uniqueChapters(questions));
+  // Collect the expected subject tab names for the active class.
+  // Each subject lives in its own sheet tab named exactly after the subject.
+  const subjectsForActiveClass = CONFIG.subjectsByClass[CONFIG.activeClassLevel] || [];
+
+  const allQuestions = [];
+
+  for (const subject of subjectsForActiveClass) {
+    const sheet = ss.getSheetByName(subject);
+    if (!sheet) continue; // Tab not created yet — skip gracefully
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) continue; // Empty sheet — skip
+
+    const headers = values[0].map(String);
+    const rows = values.slice(1);
+    const questions = rows
+      .map((row, index) => rowToQuestion(headers, row, index + 2))
+      .filter((q) => q.id && q.useInPapers === "Yes");
+    allQuestions.push(...questions);
+  }
+
+  if (!allQuestions.length) return emptyBank();
+
+  const chapters = mergeChapters(readChaptersSheet(), uniqueChapters(allQuestions));
 
   return {
     source: "Google Sheets",
@@ -118,7 +135,7 @@ function getQuestionBank() {
       activeSubject: CONFIG.activeSubject,
       classes: CONFIG.classes,
       subjectsByClass: CONFIG.subjectsByClass,
-      activeDatasets: uniqueDatasets(questions, chapters),
+      activeDatasets: uniqueDatasets(allQuestions, chapters),
       questionFields: QUESTION_FIELDS,
       questionTypes: ["MCQ", "Assertion-Reason", "Very Short Answer", "Short Answer", "Long Answer", "Case/Source-Based"],
       questionStyles: [
@@ -135,7 +152,7 @@ function getQuestionBank() {
       ]
     },
     chapters,
-    questions
+    questions: allQuestions
   };
 }
 
@@ -217,13 +234,19 @@ function rowToQuestion(headers, row, rowNumber) {
     pyqYear: String(data["PYQ Year"] || "").trim(),
     pyqBoardExam: String(data["PYQ Board/Exam"] || "").trim(),
     pyqPaperSet: String(data["PYQ Paper/Set"] || "").trim(),
-    useInPapers: String(data["Use in Papers"] || "Yes").trim(),
+    useInPapers: String(data["Use in Papers"] || "").trim(),
     timesAsked: Number(data["Times Asked"] || 0),
     lastAskedDate: stringifyDate(data["Last Asked Date"]),
     lastPaperId: String(data["Last Paper ID"] || "").trim(),
     lastUpdated: stringifyDate(data["Last Updated"]),
     notes: String(data["Notes"] || "").trim(),
-    imageUrl: String(data["Image URL"] || data["Image"] || "").trim()
+    imageUrl: String(data["Image URL"] || data["Image"] || "").trim(),
+    // Optional asset columns — added at end of sheet; blank for older Science rows
+    assetFormat:    String(data["Asset Format"]    || "").trim(),
+    assetData:      String(data["Asset Data"]      || "").trim(),
+    assetPlacement: String(data["Asset Placement"] || "").trim() || "Before Question",
+    assetWidth:     Number(data["Asset Width"]  || 0) || 300,
+    assetHeight:    Number(data["Asset Height"] || 0) || 300
   };
 }
 
@@ -257,25 +280,77 @@ function appendGeneratedPaper(payload) {
 }
 
 function updateUsage(payload) {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(CONFIG.questionsSheetName);
-  if (!sheet) throw new Error(`Missing sheet: ${CONFIG.questionsSheetName}`);
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0].map(String);
-  const idCol = headers.indexOf("Question ID") + 1;
-  const timesCol = headers.indexOf("Times Asked") + 1;
-  const dateCol = headers.indexOf("Last Asked Date") + 1;
-  const paperCol = headers.indexOf("Last Paper ID") + 1;
-  if (!idCol || !timesCol || !dateCol || !paperCol) throw new Error("Missing usage columns");
+  const ss = SpreadsheetApp.getActive();
+  const subjectsForActiveClass = CONFIG.subjectsByClass[CONFIG.activeClassLevel] || [];
 
-  const used = new Set(payload.questions.map((q) => q.id));
-  for (let r = 2; r <= values.length; r += 1) {
-    const id = String(values[r - 1][idCol - 1] || "").trim();
-    if (!used.has(id)) continue;
-    const current = Number(values[r - 1][timesCol - 1] || 0);
-    sheet.getRange(r, timesCol).setValue(current + 1);
-    sheet.getRange(r, dateCol).setValue(new Date());
-    sheet.getRange(r, paperCol).setValue(payload.test.microtestId);
+  // Build a lookup: questionId → { timesAsked } from the payload for quick access
+  const usedMap = new Map();
+  for (const q of payload.questions) usedMap.set(q.id, q);
+
+  // Iterate over every subject sheet and update matching rows
+  for (const subject of subjectsForActiveClass) {
+    const sheet = ss.getSheetByName(subject);
+    if (!sheet) continue;
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) continue;
+
+    const headers = values[0].map(String);
+    const idCol = headers.indexOf("Question ID") + 1;
+    const timesCol = headers.indexOf("Times Asked") + 1;
+    const dateCol = headers.indexOf("Last Asked Date") + 1;
+    const paperCol = headers.indexOf("Last Paper ID") + 1;
+    if (!idCol || !timesCol || !dateCol || !paperCol) continue; // Sheet missing usage columns — skip
+
+    for (let r = 2; r <= values.length; r += 1) {
+      const id = String(values[r - 1][idCol - 1] || "").trim();
+      if (!usedMap.has(id)) continue;
+      const current = Number(values[r - 1][timesCol - 1] || 0);
+      sheet.getRange(r, timesCol).setValue(current + 1);
+      sheet.getRange(r, dateCol).setValue(new Date());
+      sheet.getRange(r, paperCol).setValue(payload.test.microtestId);
+    }
   }
+}
+
+function flagQuestion(payload) {
+  if (!payload || !payload.questionId) throw new Error("Missing questionId in payload");
+  const ss = SpreadsheetApp.getActive();
+  const subjectsForActiveClass = CONFIG.subjectsByClass[CONFIG.activeClassLevel] || [];
+  const questionId = String(payload.questionId).trim();
+  const note = String(payload.note || "").trim();
+
+  // Iterate over every subject sheet to find and update the question
+  for (const subject of subjectsForActiveClass) {
+    const sheet = ss.getSheetByName(subject);
+    if (!sheet) continue;
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) continue;
+
+    const headers = values[0].map(String);
+    const idCol = headers.indexOf("Question ID") + 1;
+    const useInPapersCol = headers.indexOf("Use in Papers") + 1;
+    const notesCol = headers.indexOf("Notes") + 1;
+
+    if (!idCol || !useInPapersCol || !notesCol) continue; // missing required columns
+
+    for (let r = 2; r <= values.length; r++) {
+      const id = String(values[r - 1][idCol - 1] || "").trim();
+      if (id === questionId) {
+        // Set Use in Papers to "Review"
+        sheet.getRange(r, useInPapersCol).setValue("Review");
+
+        // Append note with timestamp
+        const existingNote = String(values[r - 1][notesCol - 1] || "").trim();
+        const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+        const notePrefix = `[Flagged ${dateStr}]: ${note || "No reason specified"}`;
+        const newNote = existingNote ? `${existingNote}\n${notePrefix}` : notePrefix;
+        sheet.getRange(r, notesCol).setValue(newNote);
+
+        return { ok: true, msg: `Question ${questionId} flagged as Review in sheet ${subject}` };
+      }
+    }
+  }
+  return { ok: false, error: `Question ID ${questionId} not found in any subject sheet` };
 }
 
 function ensureGeneratedPapersSheet() {

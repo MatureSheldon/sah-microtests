@@ -9,7 +9,8 @@
 const state = {
   bank: null,
   selectedQuestions: [],
-  lockedIds: new Set()
+  lockedIds: new Set(),
+  questionToFlag: null
 };
 
 // ─────────── INDEXEDDB HELPERS ───────────────────────────────────
@@ -128,7 +129,13 @@ const els = {
   saveSettingsBtn: document.querySelector("#saveSettingsBtn"),
   cancelSettingsBtn: document.querySelector("#cancelSettingsBtn"),
   microtestNumber: document.querySelector("#microtestNumber"),
-  demoMode: document.querySelector("#demoMode")
+  demoMode: document.querySelector("#demoMode"),
+  flagModal: document.querySelector("#flagModal"),
+  flagQuestionSnippet: document.querySelector("#flagQuestionSnippet"),
+  flagNoteInput: document.querySelector("#flagNoteInput"),
+  confirmFlagBtn: document.querySelector("#confirmFlagBtn"),
+  cancelFlagBtn: document.querySelector("#cancelFlagBtn"),
+  cancelFlagBtnSecondary: document.querySelector("#cancelFlagBtnSecondary")
 };
 
 // ─────────── UTILITIES ───────────────────────────────────────────
@@ -167,10 +174,15 @@ function subjectCode(subject) {
     .slice(0, 4);
 }
 
+function subjectsMatch(s1, s2) {
+  const norm = (s) => String(s || "").toLowerCase().trim().replace(/maths|mathematics/, "math");
+  return norm(s1) === norm(s2);
+}
+
 function questionsForCurrentDataset() {
   if (!state.bank) return [];
   return (state.bank.questions || []).filter(
-    (q) => q.classLevel === currentClassLevel() && q.subject === currentSubject()
+    (q) => q.classLevel === currentClassLevel() && subjectsMatch(q.subject, currentSubject())
   );
 }
 
@@ -178,7 +190,7 @@ function chaptersForCurrentDataset() {
   if (!state.bank) return [];
   const map = new Map();
   for (const ch of state.bank.chapters || []) {
-    if (ch.classLevel !== currentClassLevel() || ch.subject !== currentSubject()) continue;
+    if (ch.classLevel !== currentClassLevel() || !subjectsMatch(ch.subject, currentSubject())) continue;
     map.set(ch.chapterNumber, { chapterNumber: ch.chapterNumber, chapterName: ch.chapterName });
   }
   for (const q of questionsForCurrentDataset()) {
@@ -479,6 +491,7 @@ function handleDragEnd(e) {
   transitionState(() => renderPreview());
 }
 
+
 function renderPreview() {
   renderSummary();
   const marks = state.selectedQuestions.reduce((s, q) => s + q.marks, 0);
@@ -496,8 +509,17 @@ function renderPreview() {
   els.questions.className = "question-list";
   els.questions.innerHTML = state.selectedQuestions.map((q, i) => {
     const locked = state.lockedIds.has(q.id);
-    const options = q.options
-      ? `<p class="options">A. ${q.options.A}<br/>B. ${q.options.B}<br/>C. ${q.options.C}<br/>D. ${q.options.D}</p>`
+    const assets = assetsFromQuestion(q);          // ← reads inline asset columns from the question
+    const assetAt = (placement) => assets.filter(a => a.placement === placement).map(assetToHtml).join("");
+
+    const questionHtml = renderMarkdownToHtml(q.question);
+    const optionHtml = q.options
+      ? `<p class="options">
+          A. ${renderMarkdownToHtml(q.options.A)}<br/>
+          B. ${renderMarkdownToHtml(q.options.B)}<br/>
+          C. ${renderMarkdownToHtml(q.options.C)}<br/>
+          D. ${renderMarkdownToHtml(q.options.D)}
+        </p>`
       : "";
     const imagePreview = q.imageUrl
       ? `<div class="question-image-container"><img class="question-image" src="${q.imageUrl}" alt="Diagram for ${q.id}" /></div>`
@@ -508,9 +530,13 @@ function renderPreview() {
         <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
         <span>${q.marks} mark${q.marks === 1 ? "" : "s"}</span>
       </div>
-      <div class="question-text">${renderMarkdownToHtml(q.question)}</div>
+      ${assetAt("Before Question")}
+      <div class="question-text">${questionHtml}</div>
       ${imagePreview}
-      ${options}
+      ${assetAt("Before Options")}
+      ${optionHtml}
+      ${assetAt("After Options")}
+      ${assetAt("After Question")}
       <div class="tags">
         <span class="tag">Ch ${q.chapterNumber}</span>
         <span class="tag">${q.difficulty}</span>
@@ -521,6 +547,7 @@ function renderPreview() {
       <div class="question-actions">
         <button class="secondary" type="button" data-swap="${q.id}">Swap</button>
         <button class="secondary" type="button" data-lock="${q.id}">${locked ? "Unlock" : "Lock"}</button>
+        <button class="secondary" type="button" data-flag="${q.id}">Flag</button>
         <button class="secondary" type="button" data-remove="${q.id}">Remove</button>
       </div>
     </article>`;
@@ -676,13 +703,192 @@ function parseTextToRuns(text) {
 }
 
 function renderMarkdownToHtml(text) {
-  return String(text || "")
+  // First escape HTML entities, apply Markdown, then render any math
+  const escaped = String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     .replace(/\n/g, "<br/>");
+  return renderMath(escaped);
+}
+
+// ─────────── MATH (KaTeX) ────────────────────────────────────────
+
+// Returns true if text contains LaTeX delimiters: \( ... \) or \[ ... \]
+function hasMath(text) {
+  const s = String(text || "");
+  return s.includes("\\(") || s.includes("\\[");
+}
+
+// Render inline \( ... \) and display \[ ... \] math using KaTeX.
+// Falls back to plain text if KaTeX is not loaded (Science questions unaffected).
+function renderMath(text) {
+  if (typeof katex === "undefined") return text;
+  return String(text || "")
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, expr) => {
+      try { return katex.renderToString(expr.trim(), { displayMode: true, throwOnError: false }); }
+      catch (e) { return _; }
+    })
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, expr) => {
+      try { return katex.renderToString(expr.trim(), { displayMode: false, throwOnError: false }); }
+      catch (e) { return _; }
+    });
+}
+
+// ─────────── DIAGRAM / ASSET RENDERING ──────────────────────────
+
+const PLACEMENT_ORDER = [
+  "Before Question", "Before Options", "After Options",
+  "After Question", "Before Solution", "After Solution"
+];
+
+// Build a normalised asset descriptor from a question's inline columns.
+// Returns an empty array if the question has no asset, or 1-element array if it does.
+// Each question carries at most one asset (the five optional columns are per-row).
+function assetsFromQuestion(q) {
+  const fmt  = String(q.assetFormat  || "").trim();
+  const data = String(q.assetData    || "").trim();
+  if (!fmt || !data) return []; // No asset — Science rows, blank Maths rows, etc.
+  const placement = PLACEMENT_ORDER.includes(q.assetPlacement)
+    ? q.assetPlacement
+    : "Before Question";
+  return [{
+    assetId:   `${q.id}-asset`,
+    questionId: q.id,
+    format:    fmt,
+    assetData: data,
+    width:     Number(q.assetWidth)  || 300,
+    height:    Number(q.assetHeight) || 300,
+    placement
+  }];
+}
+
+// Render a coordinate-plane spec-json to an SVG string.
+function renderCoordinatePlane(spec, svgWidth, svgHeight) {
+  const xMin = Number(spec.xMin ?? -5);  const xMax = Number(spec.xMax ?? 5);
+  const yMin = Number(spec.yMin ?? -5);  const yMax = Number(spec.yMax ?? 5);
+  const pad  = 30; // px padding around the axes area
+  const drawW = svgWidth  - pad * 2;
+  const drawH = svgHeight - pad * 2;
+  const scaleX = drawW / (xMax - xMin);
+  const scaleY = drawH / (yMax - yMin);
+  // Map math coords → SVG pixels
+  const px = (x) => pad + (x - xMin) * scaleX;
+  const py = (y) => pad + (yMax - y) * scaleY;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="font-family:sans-serif;font-size:11px;">`;
+
+  // Grid lines
+  if (spec.grid !== false) {
+    svg += `<g stroke="#e0e0e0" stroke-width="0.5">`;
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+      svg += `<line x1="${px(x)}" y1="${pad}" x2="${px(x)}" y2="${pad + drawH}"/>`;
+    }
+    for (let y = Math.ceil(yMin); y <= yMax; y++) {
+      svg += `<line x1="${pad}" y1="${py(y)}" x2="${pad + drawW}" y2="${py(y)}"/>`;
+    }
+    svg += `</g>`;
+  }
+
+  // Axes
+  if (spec.axes !== false) {
+    const ax = px(0); const ay = py(0);
+    // X axis
+    svg += `<line x1="${pad}" y1="${ay}" x2="${pad + drawW}" y2="${ay}" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>`;
+    // Y axis
+    svg += `<line x1="${ax}" y1="${pad + drawH}" x2="${ax}" y2="${pad}" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>`;
+    // Arrow marker def
+    svg += `<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#333"/></marker></defs>`;
+    // X tick labels (skip 0)
+    for (let x = Math.ceil(xMin); x <= xMax; x++) {
+      if (x === 0) continue;
+      svg += `<line x1="${px(x)}" y1="${ay - 3}" x2="${px(x)}" y2="${ay + 3}" stroke="#333" stroke-width="1"/>`;
+      svg += `<text x="${px(x)}" y="${ay + 14}" text-anchor="middle" fill="#555">${x}</text>`;
+    }
+    // Y tick labels (skip 0)
+    for (let y = Math.ceil(yMin); y <= yMax; y++) {
+      if (y === 0) continue;
+      svg += `<line x1="${ax - 3}" y1="${py(y)}" x2="${ax + 3}" y2="${py(y)}" stroke="#333" stroke-width="1"/>`;
+      svg += `<text x="${ax - 8}" y="${py(y) + 4}" text-anchor="end" fill="#555">${y}</text>`;
+    }
+    // Origin label
+    svg += `<text x="${ax - 8}" y="${ay + 14}" text-anchor="end" fill="#555">0</text>`;
+    // Axis labels
+    svg += `<text x="${pad + drawW + 6}" y="${ay + 4}" fill="#333" font-weight="bold">x</text>`;
+    svg += `<text x="${ax + 4}" y="${pad - 6}" fill="#333" font-weight="bold">y</text>`;
+  }
+
+  // Build a label→coord map for segments
+  const pointMap = {};
+  (spec.points || []).forEach((pt) => { if (pt.label) pointMap[pt.label] = pt; });
+
+  // Segments
+  (spec.segments || []).forEach((seg) => {
+    const a = pointMap[seg.from]; const b = pointMap[seg.to];
+    if (!a || !b) return;
+    svg += `<line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" stroke="#2563eb" stroke-width="1.5"/>`;
+  });
+
+  // Points
+  (spec.points || []).forEach((pt) => {
+    svg += `<circle cx="${px(pt.x)}" cy="${py(pt.y)}" r="4" fill="#2563eb"/>`;
+    if (pt.label) {
+      svg += `<text x="${px(pt.x) + 6}" y="${py(pt.y) - 6}" fill="#1e40af" font-weight="bold">${pt.label}</text>`;
+    }
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+// Low-level: try to render an asset and return {svg, error}.
+// error is null on success, a message string on failure.
+// This separation lets preview show warnings while DOCX silently skips broken assets.
+function assetToSvgResult(asset) {
+  const fmt  = asset.format;
+  const data = asset.assetData;
+  try {
+    if (fmt === "svg") {
+      // Inline SVG: sanitise by refusing to execute scripts.
+      // Simple approach: strip <script> tags before rendering.
+      const safe = data.replace(/<script[\s\S]*?<\/script>/gi, "");
+      return { svg: safe.trim(), error: null };
+    }
+    if (fmt === "spec-json") {
+      const spec = JSON.parse(data); // throws on invalid JSON
+      if (spec.type === "coordinate-plane") {
+        return { svg: renderCoordinatePlane(spec, asset.width || 300, asset.height || 300), error: null };
+      }
+      return { svg: "", error: `Unknown spec type: "${spec.type}"` };
+    }
+    if (!fmt) return { svg: "", error: null }; // blank format — silently ignore
+    return { svg: "", error: `Unknown asset format: "${fmt}"` };
+  } catch (e) {
+    return { svg: "", error: e.message };
+  }
+}
+
+// Returns a raw SVG string (empty on error) — used by the DOCX pipeline.
+function assetToSvgString(asset) {
+  return assetToSvgResult(asset).svg;
+}
+
+// Returns an HTML string for the preview panel.
+// Shows a visible inline warning for broken/unknown assets instead of silent failure.
+function assetToHtml(asset) {
+  const { svg, error } = assetToSvgResult(asset);
+  if (error) {
+    console.warn("Asset render error:", error, asset.assetId);
+    return `<div class="question-asset-error" data-placement="${asset.placement}" style="
+        margin:8px 0;padding:6px 10px;border:1.5px dashed #f87171;border-radius:6px;
+        font-size:12px;color:#dc2626;font-family:sans-serif;background:#fff5f5;">
+      ⚠️ Diagram error: ${asset.format} — ${error}
+    </div>`;
+  }
+  if (!svg) return "";
+  return `<div class="question-asset" data-placement="${asset.placement}" style="margin:8px 0;text-align:center;">${svg}</div>`;
 }
 
 function paragraph(content, opts = {}) {
@@ -742,6 +948,42 @@ function makeDrawingXml(relId) {
   </w:drawing>`;
 }
 
+// Render an image as a self-contained <w:p> block with correct EMU dimensions.
+// 1 pixel @ 96 dpi = 9525 EMU. We clamp to max usable page width (16 cm ≈ 9144000 EMU).
+function drawingParagraph(relId, widthPx, heightPx) {
+  const EMU_PER_PX = 9525;
+  const MAX_W_EMU  = 9144000; // ~16 cm for A4 with standard margins
+  const wEmu = Math.min((widthPx  || 300) * EMU_PER_PX, MAX_W_EMU);
+  const hEmu = Math.round(wEmu * ((heightPx || 300) / (widthPx || 300)));
+  return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing>
+    <wp:inline distT="0" distB="0" distL="0" distR="0">
+      <wp:extent cx="${wEmu}" cy="${hEmu}"/>
+      <wp:docPr id="1" name="Diagram" descr="Diagram"/>
+      <wp:cNvGraphicFramePr>
+        <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+      </wp:cNvGraphicFramePr>
+      <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+          <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:nvPicPr>
+              <pic:cNvPr id="1" name="image.png"/>
+              <pic:cNvPicPr/>
+            </pic:nvPicPr>
+            <pic:blipFill>
+              <a:blip r:embed="${relId}"/>
+              <a:stretch><a:fillRect/></a:stretch>
+            </pic:blipFill>
+            <pic:spPr>
+              <a:xfrm><a:off x="0" y="0"/><a:ext cx="${wEmu}" cy="${hEmu}"/></a:xfrm>
+              <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+            </pic:spPr>
+          </pic:pic>
+        </a:graphicData>
+      </a:graphic>
+    </wp:inline>
+  </w:drawing></w:r></w:p>`;
+}
+
 function makeDocumentXml(payload) {
   const test = payload.test;
   const questions = payload.questions;
@@ -760,16 +1002,38 @@ function makeDocumentXml(payload) {
   questions.forEach((q, i) => {
     const section = `${q.questionType} Questions`;
     if (section !== currentSection) { currentSection = section; body += paragraph(section, { bold: true, size: 24 }); }
-    body += paragraph(`${i + 1}. [${q.marks} mark${q.marks === 1 ? "" : "s"}] ${q.question}`);
-    if (q.imgRelId) {
-      body += `<w:p><w:r>${makeDrawingXml(q.imgRelId)}</w:r></w:p>`;
+
+    // Asset helper for this question
+    const assetDrawing = (placement) => (q.assetDocxEntries || [])
+      .filter(e => e.placement === placement)
+      .map(e => drawingParagraph(e.relId, e.width, e.height))
+      .join("");
+
+    // Before-question assets
+    body += assetDrawing("Before Question");
+
+    // Question text: use PNG if it contains math, else plain text
+    if (q.questionPngRelId) {
+      body += drawingParagraph(q.questionPngRelId, 480, 50);
+    } else {
+      body += paragraph(`${i + 1}. [${q.marks} mark${q.marks === 1 ? "" : "s"}] ${q.question}`);
     }
+    // Legacy Image URL diagram
+    if (q.imgRelId) body += drawingParagraph(q.imgRelId, 300, 225);
+
+    // Before-options assets
+    body += assetDrawing("Before Options");
+
     if (q.questionType === "MCQ" && q.options) {
       body += paragraph(`   A. ${q.options.A}`);
       body += paragraph(`   B. ${q.options.B}`);
       body += paragraph(`   C. ${q.options.C}`);
       body += paragraph(`   D. ${q.options.D}`);
     }
+
+    // After-options / after-question assets
+    body += assetDrawing("After Options");
+    body += assetDrawing("After Question");
     body += paragraph("");
   });
 
@@ -778,11 +1042,20 @@ function makeDocumentXml(payload) {
   body += paragraph(`Microtest ID: ${test.microtestId}`);
   body += paragraph("");
   questions.forEach((q, i) => {
-    body += paragraph(`${i + 1}. ${q.answer}`, { bold: true });
-    if (q.imgRelId) {
-      body += `<w:p><w:r>${makeDrawingXml(q.imgRelId)}</w:r></w:p>`;
+    const assetDrawing = (placement) => (q.assetDocxEntries || [])
+      .filter(e => e.placement === placement)
+      .map(e => drawingParagraph(e.relId, e.width, e.height))
+      .join("");
+
+    if (q.answerPngRelId) {
+      body += drawingParagraph(q.answerPngRelId, 480, 50);
+    } else {
+      body += paragraph(`${i + 1}. ${q.answer}`, { bold: true });
     }
+    if (q.imgRelId) body += drawingParagraph(q.imgRelId, 300, 225);
+    body += assetDrawing("Before Solution");
     if (q.explanation) body += paragraph(`Explanation: ${q.explanation}`);
+    body += assetDrawing("After Solution");
     body += paragraph(`Tags: ${q.chapterName}; ${q.topic}; ${q.difficulty}; ${q.questionType}; ${q.questionStyle || "Direct Recall"}; ${q.marks} mark(s)`);
     if (q.sourceType || q.pyqYear) {
       body += paragraph(`Source: ${q.sourceType || "Original"}${q.pyqYear ? `; PYQ ${q.pyqYear} ${q.pyqBoardExam || ""} ${q.pyqPaperSet || ""}` : ""}`);
@@ -819,43 +1092,164 @@ function makeDocumentXml(payload) {
 </w:document>`;
 }
 
+// ─────────── SVG → PNG HELPERS (for DOCX export) ────────────────
+
+// Convert an SVG string to a PNG Blob via an offscreen <canvas>.
+function svgToPngBlob(svgString, width, height) {
+  return new Promise((resolve) => {
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url  = URL.createObjectURL(blob);
+    const img  = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width  = width  || img.naturalWidth  || 300;
+        canvas.height = height || img.naturalHeight || 300;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((b) => {
+          if (b) {
+            console.log(`[svgToPngBlob] Successfully converted SVG to PNG blob (${b.size} bytes).`);
+          } else {
+            console.warn("[svgToPngBlob] canvas.toBlob returned null.");
+          }
+          resolve(b);
+        }, "image/png");
+      } catch (err) {
+        console.error("[svgToPngBlob] canvas draw error:", err);
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }
+    };
+    img.onerror = (e) => {
+      console.error("[svgToPngBlob] Image loading failed. SVG string was:", svgString);
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+let katexCssText = "";
+async function loadKatexCss() {
+  try {
+    const res = await fetch("katex.min.css");
+    if (res.ok) {
+      const raw = await res.text();
+      // Strip out all @font-face rules to prevent browser from tainting the canvas when exporting SVGs.
+      katexCssText = raw.replace(/@font-face\s*\{[\s\S]*?\}/g, "");
+    }
+  } catch (e) {
+    console.warn("Failed to load KaTeX CSS for SVG rendering:", e);
+  }
+}
+
+// Render a math-bearing text field to a PNG Blob via KaTeX SVG → canvas.
+// Returns null if the field has no math or KaTeX is unavailable.
+async function mathFieldToPngBlob(text) {
+  if (!hasMath(text) || typeof katex === "undefined") return null;
+  // Build a temporary div to let KaTeX lay out the full text, then capture its SVG.
+  const div = document.createElement("div");
+  div.style.cssText = "position:absolute;left:-9999px;top:-9999px;font-size:14px;line-height:1.5;background:#fff;padding:4px 8px;max-width:600px";
+  div.innerHTML = renderMath(renderMarkdownToHtml(text));
+  document.body.appendChild(div);
+  // Brief yield for layout
+  await new Promise(r => setTimeout(r, 0));
+  // Measure the rendered block
+  const rect = div.getBoundingClientRect();
+  const w = Math.ceil(rect.width)  || 400;
+  const h = Math.ceil(rect.height) || 40;
+
+  // Make style safe for static display inside SVG
+  div.style.position = "static";
+  div.style.left = "auto";
+  div.style.top = "auto";
+
+  const serializer = new XMLSerializer();
+  const xhtmlStr = serializer.serializeToString(div);
+
+  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+    <defs>
+      <style type="text/css"><![CDATA[
+        ${katexCssText}
+      ]]></style>
+    </defs>
+    <foreignObject width="${w}" height="${h}">
+      ${xhtmlStr}
+    </foreignObject>
+  </svg>`;
+
+  document.body.removeChild(div);
+  return svgToPngBlob(svgStr, w * 2, h * 2); // 2× for retina clarity
+}
+
 async function buildDocxBlob(payload) {
+  console.log("[buildDocxBlob] Starting Word document generation with payload:", payload);
   const zip = new JSZip(); // eslint-disable-line no-undef
   const questions = payload.questions || [];
 
-  // Fetch diagram images asynchronously
   const imgMap = new Map();
   let imgIndex = 1;
+
+  // Helper: add an entry to imgMap and return its relId
+  async function addToImgMap(key, blob, ext) {
+    if (!blob) {
+      console.warn(`[buildDocxBlob] addToImgMap skipped because blob is null for key: ${key}`);
+      return null;
+    }
+    const relId   = `rIdImg${imgIndex}`;
+    const filename = `media/image_${imgIndex}.${ext}`;
+    imgMap.set(key, { relId, filename, data: blob, ext });
+    console.log(`[buildDocxBlob] Added image to imgMap: key=${key}, relId=${relId}, filename=${filename}, size=${blob.size} bytes`);
+    imgIndex++;
+    return relId;
+  }
+
+  // 1. Fetch external Image URL diagrams (existing Science flow)
   for (const q of questions) {
     if (q.imageUrl && !imgMap.has(q.imageUrl)) {
       try {
         const res = await fetch(q.imageUrl, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
           const blob = await res.blob();
-          let ext = "png";
-          if (blob.type === "image/jpeg" || blob.type === "image/jpg") ext = "jpeg";
-          else if (blob.type === "image/gif") ext = "gif";
-          
-          const filename = `media/image_${imgIndex}.${ext}`;
-          const relId = `rIdImg${imgIndex}`;
-          
-          imgMap.set(q.imageUrl, {
-            relId,
-            filename,
-            data: blob,
-            ext
-          });
-          imgIndex++;
+          const ext  = blob.type === "image/jpeg" || blob.type === "image/jpg" ? "jpeg" : blob.type === "image/gif" ? "gif" : "png";
+          await addToImgMap(q.imageUrl, blob, ext);
         }
-      } catch (err) {
-        console.warn(`Failed to fetch image ${q.imageUrl}:`, err);
-      }
+      } catch (err) { console.warn(`Failed to fetch image ${q.imageUrl}:`, err); }
     }
-    
-    if (q.imageUrl && imgMap.has(q.imageUrl)) {
-      q.imgRelId = imgMap.get(q.imageUrl).relId;
-    } else {
-      q.imgRelId = null;
+    q.imgRelId = q.imageUrl && imgMap.has(q.imageUrl) ? imgMap.get(q.imageUrl).relId : null;
+  }
+
+  // 2. Render inline Question Assets (diagrams) to PNG
+  for (const q of questions) {
+    q.assetDocxEntries = [];
+    for (const asset of assetsFromQuestion(q)) {   // ← reads q.assetFormat / q.assetData
+      const svgStr = assetToSvgString(asset);
+      if (!svgStr) continue;
+      const key = `asset:${asset.assetId}`;
+      if (!imgMap.has(key)) {
+        const png = await svgToPngBlob(svgStr, asset.width || 300, asset.height || 300);
+        await addToImgMap(key, png, "png");
+      }
+      const entry = imgMap.get(key);
+      if (entry) q.assetDocxEntries.push({ relId: entry.relId, placement: asset.placement, width: asset.width || 300, height: asset.height || 300 });
+    }
+  }
+
+  // 3. Render math-bearing text fields to PNG
+  for (const q of questions) {
+    q.questionPngRelId = null;
+    q.answerPngRelId   = null;
+    if (hasMath(q.question)) {
+      const png = await mathFieldToPngBlob(q.question);
+      q.questionPngRelId = await addToImgMap(`math-q:${q.id}`, png, "png");
+    }
+    if (hasMath(q.answer)) {
+      const png = await mathFieldToPngBlob(q.answer);
+      q.answerPngRelId = await addToImgMap(`math-a:${q.id}`, png, "png");
     }
   }
 
@@ -1129,12 +1523,87 @@ function closeSettings() {
   }
 }
 
+// ─────────── FLAG FOR REVIEW MODAL ────────────────────────────────
+function openFlagModal(id) {
+  const q = state.selectedQuestions.find((item) => item.id === id);
+  if (!q) return;
+  state.questionToFlag = id;
+  if (els.flagQuestionSnippet) {
+    els.flagQuestionSnippet.textContent = `${q.id}: ${q.question}`;
+  }
+  if (els.flagNoteInput) {
+    els.flagNoteInput.value = "";
+  }
+  if (els.flagModal) {
+    els.flagModal.classList.add("open");
+  }
+}
+
+function closeFlagModal() {
+  if (els.flagModal) {
+    els.flagModal.classList.remove("open");
+  }
+  state.questionToFlag = null;
+}
+
+async function confirmFlagQuestion() {
+  const id = state.questionToFlag;
+  if (!id) return;
+  const note = els.flagNoteInput ? els.flagNoteInput.value : "";
+
+  // 1. Close modal immediately
+  closeFlagModal();
+
+  // 2. Remove question locally from selectedQuestions and loaded bank questions
+  state.selectedQuestions = state.selectedQuestions.filter((q) => q.id !== id);
+  state.lockedIds.delete(id);
+
+  if (state.bank && Array.isArray(state.bank.questions)) {
+    state.bank.questions = state.bank.questions.filter((q) => q.id !== id);
+  }
+
+  // Trigger UI transition/update
+  transitionState(() => renderPreview());
+
+  // 3. Post the flag to Google Sheets
+  const sheetsUrl = getSheetsUrl();
+  if (!sheetsUrl) {
+    console.warn("No Sheets URL configured. Flagged locally but not synced.");
+    return;
+  }
+
+  try {
+    const url = new URL(sheetsUrl);
+    const passcode = getSheetsPasscode();
+    const body = {
+      action: "flagQuestion",
+      passcode,
+      payload: { questionId: id, note }
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (res.ok) {
+      console.log(`Successfully flagged question ${id} in Google Sheets.`);
+    } else {
+      console.warn(`Failed to flag question in Sheets. Status: ${res.status}`);
+    }
+  } catch (err) {
+    console.warn(`Could not sync flag to Google Sheets:`, err.message);
+  }
+}
+
 // ─────────── INIT ─────────────────────────────────────────────────
 async function init() {
   // Auto-open settings if no Sheets URL is configured yet
   if (!getSheetsUrl()) openSettings();
 
-  await Promise.all([loadQuestionBank(), loadLog()]);
+  await Promise.all([loadQuestionBank(), loadLog(), loadKatexCss()]);
 
   // Drag and drop listeners
   if (els.questions) {
@@ -1184,16 +1653,31 @@ async function init() {
   if (els.cancelSettingsBtn) els.cancelSettingsBtn.addEventListener("click", closeSettings);
   if (els.settingsModal) {
     els.settingsModal.addEventListener("click", (e) => { if (e.target === els.settingsModal) closeSettings(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeSettings();
+        closeFlagModal();
+      }
+    });
+  }
+
+  // Flag Modal listeners
+  if (els.confirmFlagBtn) els.confirmFlagBtn.addEventListener("click", confirmFlagQuestion);
+  if (els.cancelFlagBtn) els.cancelFlagBtn.addEventListener("click", closeFlagModal);
+  if (els.cancelFlagBtnSecondary) els.cancelFlagBtnSecondary.addEventListener("click", closeFlagModal);
+  if (els.flagModal) {
+    els.flagModal.addEventListener("click", (e) => { if (e.target === els.flagModal) closeFlagModal(); });
   }
 
   // Question card actions (swap, lock, remove) via delegation
   document.body.addEventListener("click", (e) => {
     const swap = e.target.closest("[data-swap]");
     const lock = e.target.closest("[data-lock]");
+    const flag = e.target.closest("[data-flag]");
     const remove = e.target.closest("[data-remove]");
     if (swap) replaceQuestion(swap.dataset.swap);
     if (lock) toggleLock(lock.dataset.lock);
+    if (flag) openFlagModal(flag.dataset.flag);
     if (remove) removeQuestion(remove.dataset.remove);
   });
 

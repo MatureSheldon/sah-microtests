@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://*.google.com https://*.googleusercontent.com; img-src 'self' data: https:; object-src 'none'; base-uri 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://*.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'self';" />
     <title>SAH Microtests</title>
     <meta name="description" content="Microtest dashboard for Scholars Academic Home, Haldwani — generate, preview and export class microtests." />
     <meta name="theme-color" content="#1e40af" />
@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="katex.min.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -187,6 +188,33 @@
       </div>
     </div>
 
+    <!-- ── Flag for Review Modal ──────────────────────────────── -->
+    <div class="modal-overlay" id="flagModal" role="dialog" aria-modal="true" aria-labelledby="flagTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="flagTitle">Flag Question for Review</h2>
+          <button class="modal-close" id="cancelFlagBtn" type="button" aria-label="Close flag dialog">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--muted); margin-bottom: 8px;">You are about to flag the following question for review. This will immediately suspend it from future paper generation.</p>
+          <div id="flagQuestionSnippet" style="padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px; font-size: 14px; font-style: italic; max-height: 100px; overflow-y: auto; margin-bottom: 16px; border-left: 3px solid #ef4444; color: var(--fg);"></div>
+          <label>
+            Reason for Suspension / Note (Optional)
+            <textarea
+              id="flagNoteInput"
+              placeholder="e.g. Has typo in option B, incorrect diagram, duplicate question"
+              rows="3"
+              style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: inherit; font-size: 14px; background: var(--card); color: var(--fg); resize: vertical; margin-top: 6px;"
+            ></textarea>
+          </label>
+        </div>
+        <div class="modal-footer actions">
+          <button id="confirmFlagBtn" type="button" style="background-color: #ef4444; color: white;">Flag &amp; Exclude</button>
+          <button id="cancelFlagBtnSecondary" type="button" class="secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Chapter Row Template ─────────────────────────────── -->
     <template id="chapterRowTemplate">
       <div class="chapter-row">
@@ -202,6 +230,7 @@
       </div>
     </template>
 
+    <script src="katex.min.js"></script>
     <script src="jszip.min.js"></script>
     <script src="app.js"></script>
   </body>

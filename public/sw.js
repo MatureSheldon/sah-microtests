@@ -1,13 +1,30 @@
 // SAH Microtests — Service Worker
 // Strategy: cache-first for app shell, network-first for Sheets API
 
-const CACHE = "sah-v1";
+const CACHE = "sah-v6";
 
 const SHELL = [
   "./",
   "index.html",
   "styles.css",
   "app.js",
+  "katex.min.js",
+  "katex.min.css",
+  "fonts/KaTeX_Main-Regular.woff2",
+  "fonts/KaTeX_Main-Bold.woff2",
+  "fonts/KaTeX_Main-Italic.woff2",
+  "fonts/KaTeX_Math-Italic.woff2",
+  "fonts/KaTeX_Math-BoldItalic.woff2",
+  "fonts/KaTeX_AMS-Regular.woff2",
+  "fonts/KaTeX_Size1-Regular.woff2",
+  "fonts/KaTeX_Size2-Regular.woff2",
+  "fonts/KaTeX_Size3-Regular.woff2",
+  "fonts/KaTeX_Size4-Regular.woff2",
+  "fonts/KaTeX_SansSerif-Regular.woff2",
+  "fonts/KaTeX_Typewriter-Regular.woff2",
+  "fonts/KaTeX_Caligraphic-Regular.woff2",
+  "fonts/KaTeX_Caligraphic-Bold.woff2",
+  "fonts/KaTeX_Script-Regular.woff2",
   "jszip.min.js",
   "manifest.json",
   "fallback-bank.json",
