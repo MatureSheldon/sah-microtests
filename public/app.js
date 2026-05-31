@@ -948,7 +948,20 @@ async function fetchBankWithFallback() {
     console.warn("Cache read failed:", e.message);
   }
 
-  // No Sheets URL + no cached data — ask user to configure
+  // 3. Try bundled fallback-bank.json
+  try {
+    const res = await fetch("fallback-bank.json");
+    if (res.ok) {
+      const bank = await res.json();
+      if (bank && Array.isArray(bank.questions)) {
+        return { ...bank, connection: { source: "offline-fallback", ok: true } };
+      }
+    }
+  } catch (e) {
+    console.warn("Bundled fallback fetch failed:", e.message);
+  }
+
+  // No Sheets URL + no cached data + no fallback file
   const msg = !sheetsUrl
     ? "No Google Sheets URL configured. Open Settings (⚙) and paste your Apps Script URL."
     : "Google Sheets is unreachable and no cached data is available. Check your connection and refresh.";

@@ -10,6 +10,7 @@ const SHELL = [
   "app.js",
   "jszip.min.js",
   "manifest.json",
+  "fallback-bank.json",
   "icon-192.png",
   "icon-512.png",
   "logo.png"
