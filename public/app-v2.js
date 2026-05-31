@@ -135,7 +135,15 @@ const els = {
   flagNoteInput: document.querySelector("#flagNoteInput"),
   confirmFlagBtn: document.querySelector("#confirmFlagBtn"),
   cancelFlagBtn: document.querySelector("#cancelFlagBtn"),
-  cancelFlagBtnSecondary: document.querySelector("#cancelFlagBtnSecondary")
+  cancelFlagBtnSecondary: document.querySelector("#cancelFlagBtnSecondary"),
+  topicModal: document.querySelector("#topicModal"),
+  topicModalName: document.querySelector("#topicModalName"),
+  topicTypeGrid: document.querySelector("#topicTypeGrid"),
+  topicSwapBtn: document.querySelector("#topicSwapBtn"),
+  topicAddBtn: document.querySelector("#topicAddBtn"),
+  closeTopicModalBtn: document.querySelector("#closeTopicModalBtn"),
+  emptyState: document.querySelector("#emptyState"),
+  exportActionContainer: document.querySelector("#exportActionContainer")
 };
 
 // ─────────── UTILITIES ───────────────────────────────────────────
@@ -205,7 +213,7 @@ function hasCurrentDataset() { return questionsForCurrentDataset().length > 0; }
 // ─────────── CHAPTER PLAN ────────────────────────────────────────
 function getChapterPlan() {
   const chapters = chaptersForCurrentDataset();
-  return [...document.querySelectorAll(".chapter-row")]
+  const rawPlan = [...document.querySelectorAll(".chapter-row")]
     .map((row) => {
       const rawValue = row.querySelector(".chapter-select").value;
       if (!rawValue) return null;
@@ -214,10 +222,37 @@ function getChapterPlan() {
       return {
         chapterNumber,
         chapterName: chapter ? chapter.chapterName : `Chapter ${chapterNumber}`,
-        percentage: Number(row.querySelector(".chapter-pct").value || 0)
+        rawWeight: Number(row.querySelector(".chapter-pct").value || 0)
       };
     })
-    .filter((item) => item !== null && item.chapterNumber > 0 && item.percentage > 0);
+    .filter((item) => item !== null && item.chapterNumber > 0 && item.rawWeight > 0);
+
+  const totalRawWeight = rawPlan.reduce((s, i) => s + i.rawWeight, 0);
+  if (totalRawWeight === 0) return [];
+
+  // Apportion to multiples of 5 summing to 100% (20 steps of 5%)
+  const totalSteps = 20;
+  rawPlan.forEach(item => {
+    item.exactSteps = (item.rawWeight / totalRawWeight) * totalSteps;
+    item.baseSteps = Math.floor(item.exactSteps);
+    item.remainder = item.exactSteps - item.baseSteps;
+  });
+
+  let assignedSteps = rawPlan.reduce((s, i) => s + i.baseSteps, 0);
+  const sortedByRem = [...rawPlan].sort((a, b) => b.remainder - a.remainder);
+  
+  let i = 0;
+  while (assignedSteps < totalSteps && i < sortedByRem.length) {
+    sortedByRem[i].baseSteps++;
+    assignedSteps++;
+    i++;
+  }
+
+  return rawPlan.map(item => ({
+    chapterNumber: item.chapterNumber,
+    chapterName: item.chapterName,
+    percentage: item.baseSteps * 5
+  }));
 }
 
 function getDifficultyMix() {
@@ -255,17 +290,8 @@ function addChapterRow(selected, pct) {
   const row = template.content.firstElementChild.cloneNode(true);
   renderChapterOptions(row.querySelector(".chapter-select"), selected ?? null);
   const inputEl = row.querySelector(".chapter-pct");
-  inputEl.value = pct ?? 100;
-  row.querySelector(".minus-btn").addEventListener("click", () => {
-    inputEl.value = Math.max(0, Number(inputEl.value || 0) - 5);
-    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-    inputEl.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  row.querySelector(".plus-btn").addEventListener("click", () => {
-    inputEl.value = Math.min(100, Number(inputEl.value || 0) + 5);
-    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-    inputEl.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  inputEl.value = pct ?? 10;
+
   row.querySelector(".remove-chapter").addEventListener("click", () => {
     row.remove();
     distributeChaptersEqually();
@@ -296,21 +322,25 @@ function distributeChaptersEqually() {
 }
 
 // ─────────── SPLIT BAR ───────────────────────────────────────────
-const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#6366f1", "#14b8a6", "#f43f5e"];
+const barColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-cyan-400", "bg-violet-400"];
 
 function renderSplitBar() {
   const bar = els.chapterSplitBar;
   if (!bar) return;
   const plan = getChapterPlan();
+  const totalWeight = plan.reduce((s, i) => s + i.percentage, 0);
+  
   bar.innerHTML = "";
-  if (!plan.length) { bar.style.display = "none"; return; }
+  if (!plan.length || totalWeight === 0) { bar.style.display = "none"; return; }
+  
   bar.style.display = "flex";
+  bar.classList.remove("hidden");
   plan.forEach((item, i) => {
+    const normalizedPct = (item.percentage / totalWeight) * 100;
     const seg = document.createElement("div");
-    seg.className = "split-bar-segment";
-    seg.style.setProperty("--pct", item.percentage);
-    seg.style.backgroundColor = colors[i % colors.length];
-    seg.title = `Ch ${item.chapterNumber}: ${item.percentage}%`;
+    seg.className = `h-full transition-all duration-500 ${barColors[i % barColors.length]}`;
+    seg.style.width = normalizedPct + "%";
+    seg.title = `Ch ${item.chapterNumber}: ${Math.round(normalizedPct)}%`;
     bar.appendChild(seg);
   });
 }
@@ -323,31 +353,17 @@ function validateMix() {
   const diffSum = diff.Easy + diff.Medium + diff.Hard;
   const msgs = [];
   if (!hasCurrentDataset()) msgs.push("No question bank for this class and subject yet.");
-  if (chapterSum !== 100) msgs.push(`Chapter % adds to ${chapterSum}%, not 100%.`);
-  if (diffSum !== 100) msgs.push(`Difficulty % adds to ${diffSum}%, not 100%.`);
-  els.chapterHint.textContent = msgs.length ? msgs.join(" ") : "✓ Percentages are set.";
+  if (chapterSum === 0) msgs.push("Set at least one chapter weight.");
+  if (diffSum === 0) msgs.push("Set at least one difficulty weight.");
+  
+  els.chapterHint.textContent = msgs.length ? msgs.join(" ") : "✓ Blueprint ready.";
   els.chapterHint.classList.toggle("warn", msgs.length > 0);
   els.chapterHint.classList.toggle("ready", msgs.length === 0);
   renderSplitBar();
+  
+  // Remove the old strict pctRemaining logic completely as it's no longer needed for weights
   if (els.pctRemaining) {
-    const remaining = 100 - chapterSum;
-    els.pctRemaining.className = "pct-remaining";
-    els.pctRemaining.innerHTML = "";
-    if (remaining === 0) {
-      els.pctRemaining.textContent = "✓ 100% Chapter Mix Allocated";
-      els.pctRemaining.classList.add("valid");
-    } else {
-      const span = document.createElement("span");
-      span.textContent = remaining > 0 ? `⚠ ${remaining}% Remaining` : `⚠ Exceeded by ${Math.abs(remaining)}%`;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "pct-remaining-action";
-      btn.textContent = "Distribute Equally";
-      btn.addEventListener("click", distributeChaptersEqually);
-      els.pctRemaining.appendChild(span);
-      els.pctRemaining.appendChild(btn);
-      els.pctRemaining.classList.add(remaining > 0 ? "invalid" : "over");
-    }
+    els.pctRemaining.style.display = "none";
   }
   return msgs.length === 0;
 }
@@ -365,18 +381,28 @@ function scoreCandidate(q, selected, chapterTarget, diffTargets) {
 
 function generatePaper() {
   if (!hasCurrentDataset()) { alert("This dataset has no questions yet."); return; }
-  if (!validateMix()) { alert("Please make chapter and difficulty percentages each add to 100%."); return; }
+  if (!validateMix()) { alert("Please set at least one chapter weight and difficulty weight."); return; }
+  
   const totalMarks = numberValue("totalMarks");
   const plan = getChapterPlan();
+  const chapterWeightSum = plan.reduce((s, i) => s + i.percentage, 0);
+  
   const diff = getDifficultyMix();
-  const diffTargets = Object.fromEntries(Object.entries(diff).map(([k, p]) => [k, targetMarks(totalMarks, p)]));
+  const diffWeightSum = diff.Easy + diff.Medium + diff.Hard;
+  
+  const diffTargets = {
+    Easy: targetMarks(totalMarks, (diff.Easy / diffWeightSum) * 100 || 0),
+    Medium: targetMarks(totalMarks, (diff.Medium / diffWeightSum) * 100 || 0),
+    Hard: targetMarks(totalMarks, (diff.Hard / diffWeightSum) * 100 || 0)
+  };
+  
   const available = getAvailableQuestions();
   const locked = state.selectedQuestions.filter((q) => state.lockedIds.has(q.id));
   const selected = [...locked];
   const used = new Set(selected.map((q) => q.id));
 
   for (const p of plan) {
-    const chTarget = targetMarks(totalMarks, p.percentage);
+    const chTarget = targetMarks(totalMarks, (p.percentage / chapterWeightSum) * 100 || 0);
     let chMrks = selected.filter((q) => q.chapterNumber === p.chapterNumber).reduce((s, q) => s + q.marks, 0);
     const pool = shuffle(available.filter((q) => q.chapterNumber === p.chapterNumber && !used.has(q.id)));
     while (chMrks < chTarget && selected.reduce((s, q) => s + q.marks, 0) < totalMarks) {
@@ -430,6 +456,115 @@ function replaceQuestion(id) {
 function toggleLock(id) {
   if (state.lockedIds.has(id)) state.lockedIds.delete(id);
   else state.lockedIds.add(id);
+  transitionState(() => renderPreview());
+}
+
+let topicModalState = { sourceQuestionId: null, topicName: null };
+
+function openTopicModal(sourceId) {
+  const q = state.selectedQuestions.find(x => x.id === sourceId);
+  if (!q) return;
+  topicModalState = { sourceQuestionId: q.id, topicName: q.topic };
+  
+  els.topicModalName.textContent = q.topic;
+  
+  const used = new Set(state.selectedQuestions.map(x => x.id));
+  const pool = getAvailableQuestions().filter(x => !used.has(x.id) && x.topic === q.topic);
+  
+  const typeCounts = pool.reduce((acc, x) => {
+    acc[x.questionType] = (acc[x.questionType] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const types = Object.keys(typeCounts);
+  topicModalState.selectedType = null;
+  
+  if (types.length === 0) {
+    els.topicTypeGrid.innerHTML = `<div class="col-span-2 text-center text-[12px] text-slate-500 py-4">No additional questions available for this topic.</div>`;
+    els.topicSwapBtn.disabled = true;
+    els.topicAddBtn.disabled = true;
+  } else {
+    els.topicTypeGrid.innerHTML = types.map(t => {
+      const count = typeCounts[t];
+      return `<button type="button" class="topic-tile text-left p-3 border border-slate-200 rounded-lg hover:border-indigo-400 focus:outline-none transition-colors" data-type="${t}">
+        <div class="text-[13px] font-semibold text-slate-800">${t}</div>
+        <div class="text-[11px] font-medium text-slate-500 mt-0.5">${count} available</div>
+      </button>`;
+    }).join("");
+    
+    const tiles = els.topicTypeGrid.querySelectorAll(".topic-tile");
+    tiles.forEach(tile => {
+      tile.addEventListener("click", () => {
+        tiles.forEach(t => {
+          t.classList.remove("border-indigo-500", "ring-1", "ring-indigo-500", "bg-indigo-50/30");
+          t.classList.add("border-slate-200");
+        });
+        tile.classList.remove("border-slate-200", "hover:border-indigo-400");
+        tile.classList.add("border-indigo-500", "ring-1", "ring-indigo-500", "bg-indigo-50/30");
+        
+        topicModalState.selectedType = tile.dataset.type;
+        els.topicSwapBtn.disabled = false;
+        els.topicAddBtn.disabled = false;
+      });
+    });
+    
+    if (types.includes(q.questionType)) {
+      const preselectTile = els.topicTypeGrid.querySelector(`[data-type="${q.questionType}"]`);
+      if (preselectTile) preselectTile.click();
+    } else {
+      els.topicSwapBtn.disabled = true;
+      els.topicAddBtn.disabled = true;
+    }
+  }
+  
+  els.topicModal.classList.remove("hidden");
+  void els.topicModal.offsetWidth;
+  els.topicModal.classList.remove("opacity-0");
+  els.topicModal.firstElementChild.classList.remove("scale-95");
+}
+
+function closeTopicModal() {
+  els.topicModal.classList.add("opacity-0");
+  els.topicModal.firstElementChild.classList.add("scale-95");
+  setTimeout(() => els.topicModal.classList.add("hidden"), 300);
+}
+
+function executeTopicSwap() {
+  const selectedType = topicModalState.selectedType;
+  if (!selectedType) return;
+  
+  const used = new Set(state.selectedQuestions.map(x => x.id));
+  const pool = getAvailableQuestions().filter(x => 
+    !used.has(x.id) && x.topic === topicModalState.topicName && x.questionType === selectedType
+  );
+  if (!pool.length) return;
+  
+  const best = pool[0];
+  state.selectedQuestions = state.selectedQuestions.map(q => (q.id === topicModalState.sourceQuestionId ? best : q));
+  
+  closeTopicModal();
+  transitionState(() => renderPreview());
+}
+
+function executeTopicAdd() {
+  const selectedType = topicModalState.selectedType;
+  if (!selectedType) return;
+  
+  const used = new Set(state.selectedQuestions.map(x => x.id));
+  const pool = getAvailableQuestions().filter(x => 
+    !used.has(x.id) && x.topic === topicModalState.topicName && x.questionType === selectedType
+  );
+  if (!pool.length) return;
+  
+  const best = pool[0];
+  const idx = state.selectedQuestions.findIndex(q => q.id === topicModalState.sourceQuestionId);
+  if (idx !== -1) {
+    state.selectedQuestions.splice(idx + 1, 0, best);
+  } else {
+    state.selectedQuestions.push(best);
+  }
+  
+  closeTopicModal();
   transitionState(() => renderPreview());
 }
 
@@ -499,17 +634,34 @@ function renderPreview() {
   const mt = value("microtestNumber");
   const isDemo = els.demoMode.checked;
   const label = isDemo ? "Demo Microtest" : "Microtest";
+  
   els.paperMeta.textContent = `${label} ${mt} — ${marks}/${wanted} marks selected`;
-  els.exportDocx.disabled = state.selectedQuestions.length === 0;
+  
   if (!state.selectedQuestions.length) {
-    els.questions.className = "question-list empty";
-    els.questions.textContent = "No questions selected yet. Configure chapters and click Generate Preview.";
+    els.emptyState.classList.remove("hidden");
+    els.paperMeta.classList.add("hidden");
+    els.summary.classList.add("hidden");
+    els.exportActionContainer.classList.add("hidden");
+    
+    // Clear the question list HTML but keep the emptyState element
+    Array.from(els.questions.children).forEach(child => {
+      if (child !== els.emptyState) child.remove();
+    });
     return;
   }
-  els.questions.className = "question-list";
-  els.questions.innerHTML = state.selectedQuestions.map((q, i) => {
+  
+  els.emptyState.classList.add("hidden");
+  els.paperMeta.classList.remove("hidden");
+  els.summary.classList.remove("hidden");
+  els.exportActionContainer.classList.remove("hidden");
+  
+  // Re-append the empty state first, then the questions, so empty state doesn't get destroyed
+  els.questions.innerHTML = "";
+  els.questions.appendChild(els.emptyState);
+  
+  const questionsHtml = state.selectedQuestions.map((q, i) => {
     const locked = state.lockedIds.has(q.id);
-    const assets = assetsFromQuestion(q);          // ← reads inline asset columns from the question
+    const assets = assetsFromQuestion(q);
     const assetAt = (placement) => assets.filter(a => a.placement === placement).map(assetToHtml).join("");
 
     const questionHtml = renderMarkdownToHtml(q.question);
@@ -524,34 +676,73 @@ function renderPreview() {
     const imagePreview = q.imageUrl
       ? `<div class="question-image-container"><img class="question-image" src="${q.imageUrl}" alt="Diagram for ${q.id}" /></div>`
       : "";
-    return `<article class="question${locked ? " locked" : ""}" data-id="${q.id}" data-index="${i}">
-      <div class="question-head">
-        <span>Q${i + 1} · ${q.id}</span>
-        <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-        <span>${q.marks} mark${q.marks === 1 ? "" : "s"}</span>
+    const diffColor = q.difficulty === "Easy" ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                    : q.difficulty === "Hard" ? "bg-rose-50 text-rose-600 border-rose-100" 
+                    : "bg-amber-50 text-amber-600 border-amber-100";
+    
+    const lockBtnClass = locked ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100";
+
+    const lockedClass = locked ? "bg-indigo-50/30 border-l-2 border-indigo-400" : "border-b border-slate-100 hover:bg-slate-50/50";
+    
+    return `<article class="group relative flex gap-4 p-4 transition-colors ${lockedClass}" data-id="${q.id}" data-index="${i}">
+      <!-- Left side: Drag handle & Q Number -->
+      <div class="flex flex-col items-center gap-2 w-8 shrink-0 pt-1">
+        <div class="text-slate-300 cursor-grab hover:text-slate-500 font-bold" title="Drag to reorder">⋮⋮</div>
+        <span class="text-[10px] font-bold text-slate-400 tracking-wider">Q${i + 1}</span>
       </div>
-      ${assetAt("Before Question")}
-      <div class="question-text">${questionHtml}</div>
-      ${imagePreview}
-      ${assetAt("Before Options")}
-      ${optionHtml}
-      ${assetAt("After Options")}
-      ${assetAt("After Question")}
-      <div class="tags">
-        <span class="tag">Ch ${q.chapterNumber}</span>
-        <span class="tag">${q.difficulty}</span>
-        <span class="tag">${q.questionType}</span>
-        <span class="tag">${q.questionStyle || "Direct Recall"}</span>
-        <span class="tag">${q.topic}</span>
-      </div>
-      <div class="question-actions">
-        <button class="secondary" type="button" data-swap="${q.id}">Swap</button>
-        <button class="secondary" type="button" data-lock="${q.id}">${locked ? "Unlock" : "Lock"}</button>
-        <button class="secondary" type="button" data-flag="${q.id}">Flag</button>
-        <button class="secondary" type="button" data-remove="${q.id}">Remove</button>
+
+      <!-- Main Content -->
+      <div class="flex-1 min-w-0 pr-24">
+        <!-- Meta Row -->
+        <div class="flex items-center gap-2 mb-2 flex-wrap">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">${q.id}</span>
+          <span class="text-slate-300">•</span>
+          <span class="text-[11px] font-medium text-slate-500">${q.marks} mark${q.marks === 1 ? "" : "s"}</span>
+          <span class="text-slate-300">•</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${diffColor}">${q.difficulty}</span>
+          <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200/60 text-[10px] font-medium">Ch ${q.chapterNumber}</span>
+          <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60 text-[10px] font-medium">${q.questionType}</span>
+          <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200/60 text-[10px] font-medium">${q.topic}</span>
+        </div>
+
+        <!-- Question Body -->
+        <div class="text-sm text-slate-800 leading-snug mb-2">
+          ${assetAt("Before Question")}
+          ${questionHtml}
+          ${imagePreview}
+          ${assetAt("Before Options")}
+        </div>
+        
+        <!-- Options (if any) -->
+        ${q.options ? `<div class="text-[13px] text-slate-600 leading-relaxed bg-white/60 rounded-md p-3 border border-slate-100">
+          A. ${renderMarkdownToHtml(q.options.A)}<br/>
+          B. ${renderMarkdownToHtml(q.options.B)}<br/>
+          C. ${renderMarkdownToHtml(q.options.C)}<br/>
+          D. ${renderMarkdownToHtml(q.options.D)}
+        </div>` : ""}
+        
+        ${assetAt("After Options")}
+        ${assetAt("After Question")}
+        
+        <!-- Action Footer -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <button type="button" class="px-3 py-1.5 rounded-md bg-blue-50/50 text-blue-600 border border-blue-100 text-[11px] font-medium hover:bg-blue-100 transition-colors flex items-center gap-1.5" data-topic-action="${q.id}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            More from Topic
+          </button>
+          
+          <div class="flex items-center gap-1.5">
+            <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100" type="button" data-swap="${q.id}">Swap</button>
+            <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${lockBtnClass}" type="button" data-lock="${q.id}">${locked ? "Unlock" : "Lock"}</button>
+            <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50" type="button" data-flag="${q.id}">Flag</button>
+            <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50" type="button" data-remove="${q.id}">Remove</button>
+          </div>
+        </div>
       </div>
     </article>`;
-  }).join("");
+  });
+  
+  els.questions.insertAdjacentHTML("beforeend", questionsHtml.join(""));
 }
 
 function microtestPayload() {
@@ -1669,16 +1860,26 @@ async function init() {
     els.flagModal.addEventListener("click", (e) => { if (e.target === els.flagModal) closeFlagModal(); });
   }
 
-  // Question card actions (swap, lock, remove) via delegation
+  // Topic Modal listeners
+  if (els.closeTopicModalBtn) els.closeTopicModalBtn.addEventListener("click", closeTopicModal);
+  if (els.topicSwapBtn) els.topicSwapBtn.addEventListener("click", executeTopicSwap);
+  if (els.topicAddBtn) els.topicAddBtn.addEventListener("click", executeTopicAdd);
+  if (els.topicModal) {
+    els.topicModal.addEventListener("click", (e) => { if (e.target === els.topicModal) closeTopicModal(); });
+  }
+
+  // Question card actions (swap, lock, remove, topic) via delegation
   document.body.addEventListener("click", (e) => {
     const swap = e.target.closest("[data-swap]");
     const lock = e.target.closest("[data-lock]");
     const flag = e.target.closest("[data-flag]");
     const remove = e.target.closest("[data-remove]");
+    const topic = e.target.closest("[data-topic-action]");
     if (swap) replaceQuestion(swap.dataset.swap);
     if (lock) toggleLock(lock.dataset.lock);
     if (flag) openFlagModal(flag.dataset.flag);
     if (remove) removeQuestion(remove.dataset.remove);
+    if (topic) openTopicModal(topic.dataset.topicAction);
   });
 
   // Difficulty mix live validation

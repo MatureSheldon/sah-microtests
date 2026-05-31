@@ -1,13 +1,13 @@
 // SAH Microtests — Service Worker
 // Strategy: cache-first for app shell, network-first for Sheets API
 
-const CACHE = "sah-v6";
+const CACHE = "sah-v21";
 
 const SHELL = [
   "./",
   "index.html",
-  "styles.css",
-  "app.js",
+  "styles-v2.css",
+  "app-v2.js",
   "katex.min.js",
   "katex.min.css",
   "fonts/KaTeX_Main-Regular.woff2",

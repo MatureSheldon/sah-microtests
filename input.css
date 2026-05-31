@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --color-brand-50: #f8fafc;
+  --color-brand-100: #f1f5f9;
+  --color-brand-600: #334155;
+  --color-brand-900: #0f172a;
+}
+
+body {
+  @apply bg-brand-50 text-brand-900;
+}
+
+/* Legacy JS Components */
+.stat {
+  @apply flex flex-col p-4 bg-slate-50 border border-slate-200 rounded-xl text-center;
+}
+.stat strong {
+  @apply text-xl font-bold text-slate-900;
+}
+.stat span {
+  @apply text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-1;
+}
+
+.icon-button {
+  @apply p-1.5 text-slate-400 hover:text-brand-900 hover:bg-slate-100 rounded-md transition-colors;
+}
+
+.check {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-[13px] font-medium text-slate-600 cursor-pointer transition-colors hover:bg-slate-50;
+}
+.check:has(input:checked) {
+  @apply bg-indigo-50 border-indigo-200 text-indigo-700;
+}
+.check input {
+  @apply w-3.5 h-3.5 accent-indigo-600;
+}
+
+.log-entry {
+  @apply flex items-center justify-between p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors;
+}
+.log-entry-main {
+  @apply flex flex-col gap-1;
+}

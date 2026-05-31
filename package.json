@@ -4,12 +4,18 @@
   "private": true,
   "description": "Local microtest dashboard for Scholars Academic Home.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:css": "tailwindcss -i ./input.css -o ./public/styles-v2.css --minify",
+    "watch:css": "tailwindcss -i ./input.css -o ./public/styles.css --watch"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "katex": "0.16.21"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "tailwindcss": "^4.3.0"
   }
 }
