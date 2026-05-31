@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SAH Microtests</title>
+    <meta name="description" content="Microtest dashboard for Scholars Academic Home, Haldwani — generate, preview and export class microtests." />
+    <meta name="theme-color" content="#1e40af" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-brand">
+        <img
+          src="/logo.png"
+          alt="Scholars Academic Home"
+          class="school-logo"
+          onerror="this.style.display='none'"
+        />
+        <div>
+          <p class="eyebrow">Scholars Academic Home, Haldwani</p>
+          <h1>Microtest Dashboard</h1>
+        </div>
+      </div>
+      <div class="topbar-end">
+        <div class="pill" id="activeDatasetPill">Loading…</div>
+        <button id="settingsBtn" class="settings-btn" type="button" title="Configure Google Sheets URL" aria-label="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls">
+        <div class="section-title">
+          <h2>Create Microtest</h2>
+          <div class="log-tools">
+            <span id="bankCount">Loading bank…</span>
+            <button id="refreshBank" class="secondary compact-button" type="button">Refresh Bank</button>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Class
+            <select id="classSelect"></select>
+          </label>
+          <label>
+            Subject
+            <select id="subjectSelect"></select>
+          </label>
+        </div>
+        <p class="hint" id="datasetHint"></p>
+        <p class="hint" id="connectionHint"></p>
+
+        <div class="grid two">
+          <label>
+            Microtest Number
+            <input id="microtestNumber" type="number" min="1" value="1" />
+          </label>
+          <label>
+            Total Marks
+            <input id="totalMarks" type="number" min="5" value="20" />
+          </label>
+          <label>
+            Duration (min)
+            <input id="durationMinutes" type="number" min="5" value="30" />
+          </label>
+          <label>
+            Teacher Name
+            <input id="teacherName" value="Science Teacher" />
+          </label>
+        </div>
+
+        <div class="section-title spaced">
+          <h2>Chapter Mix</h2>
+          <button id="addChapter" class="secondary" type="button">Add Chapter</button>
+        </div>
+        <div id="chapterSplitBar" class="split-bar"></div>
+        <div id="chapterRows" class="rows"></div>
+        <div id="pctRemaining" class="pct-remaining"></div>
+        <p class="hint" id="chapterHint"></p>
+
+        <div class="section-title spaced">
+          <h2>Difficulty Mix</h2>
+        </div>
+        <div class="grid three">
+          <label>
+            Easy %
+            <input id="easyPct" type="number" min="0" max="100" value="40" />
+          </label>
+          <label>
+            Medium %
+            <input id="mediumPct" type="number" min="0" max="100" value="40" />
+          </label>
+          <label>
+            Hard %
+            <input id="hardPct" type="number" min="0" max="100" value="20" />
+          </label>
+        </div>
+
+        <div class="section-title spaced">
+          <h2>Question Types</h2>
+        </div>
+        <div id="typeFilters" class="checks"></div>
+
+        <label class="check demo-check">
+          <input id="demoMode" type="checkbox" />
+          Demo export
+        </label>
+
+        <div class="actions">
+          <button id="generate" type="button">Generate Preview</button>
+          <button id="clearLocks" class="secondary" type="button">Unlock All</button>
+        </div>
+      </section>
+
+      <section class="panel preview">
+        <div class="section-title">
+          <h2>Preview Paper</h2>
+          <span id="paperMeta">No paper generated yet</span>
+        </div>
+        <div id="summary" class="summary"></div>
+        <div id="questions" class="question-list empty">Choose chapters and generate a preview.</div>
+        <div class="actions export-actions">
+          <button id="exportDocx" type="button" disabled>Export Word File</button>
+          <span id="downloadLink" class="download-confirm" hidden></span>
+        </div>
+      </section>
+
+      <section class="panel log">
+        <div class="section-title">
+          <h2>Microtest Log</h2>
+          <div class="log-tools">
+            <label class="check compact">
+              <input id="showDemos" type="checkbox" />
+              Show demos
+            </label>
+            <button id="refreshLog" class="secondary" type="button">Refresh</button>
+          </div>
+        </div>
+        <div id="logList" class="log-list empty">No exports yet.</div>
+      </section>
+    </main>
+
+    <!-- ── Settings Modal ───────────────────────────────────── -->
+    <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="settingsTitle">Settings</h2>
+          <button class="modal-close" id="cancelSettingsBtn" type="button" aria-label="Close settings">✕</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            Google Sheets API URL
+            <input
+              id="sheetsUrlInput"
+              type="url"
+              placeholder="https://script.google.com/macros/s/…/exec"
+              autocomplete="off"
+            />
+          </label>
+          <p class="hint">
+            Paste the deployed Apps Script web app URL here.<br />
+            In your Google Sheet → <strong>Extensions → Apps Script → Deploy → Manage deployments</strong>.
+            Without this URL the app works offline using bundled data.
+          </p>
+        </div>
+        <div class="modal-footer actions">
+          <button id="saveSettingsBtn" type="button">Save &amp; Reconnect</button>
+          <button id="cancelSettingsBtn" type="button" class="secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chapter Row Template ─────────────────────────────── -->
+    <template id="chapterRowTemplate">
+      <div class="chapter-row">
+        <select class="chapter-select">
+          <option value="" disabled selected>— Select a chapter —</option>
+        </select>
+        <div class="pct-stepper-container">
+          <button class="stepper minus-btn" type="button">−</button>
+          <input class="chapter-pct" type="number" min="0" max="100" value="100" aria-label="Chapter percentage" />
+          <button class="stepper plus-btn" type="button">+</button>
+        </div>
+        <button class="icon-button remove-chapter" type="button" title="Remove chapter">✕</button>
+      </div>
+    </template>
+
+    <script src="/jszip.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

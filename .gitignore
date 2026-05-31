@@ -1,0 +1,13 @@
+# Local configuration and credentials
+config.json
+
+# Dependencies
+node_modules/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Output exports and local databases (from deprecated server)
+exports/
+data/
