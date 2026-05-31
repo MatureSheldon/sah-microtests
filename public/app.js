@@ -87,6 +87,15 @@ function setSheetsUrl(url) {
   else localStorage.removeItem("sah-sheets-url");
 }
 
+function getSheetsPasscode() {
+  return localStorage.getItem("sah-sheets-passcode") || "";
+}
+
+function setSheetsPasscode(passcode) {
+  if (passcode && passcode.trim()) localStorage.setItem("sah-sheets-passcode", passcode.trim());
+  else localStorage.removeItem("sah-sheets-passcode");
+}
+
 // ─────────── DOM ELEMENTS ─────────────────────────────────────────
 const els = {
   activeDatasetPill: document.querySelector("#activeDatasetPill"),
@@ -115,6 +124,7 @@ const els = {
   settingsBtn: document.querySelector("#settingsBtn"),
   settingsModal: document.querySelector("#settingsModal"),
   sheetsUrlInput: document.querySelector("#sheetsUrlInput"),
+  sheetsPasscodeInput: document.querySelector("#sheetsPasscodeInput"),
   saveSettingsBtn: document.querySelector("#saveSettingsBtn"),
   cancelSettingsBtn: document.querySelector("#cancelSettingsBtn"),
   microtestNumber: document.querySelector("#microtestNumber"),
@@ -135,6 +145,14 @@ function shuffle(items) {
 }
 
 function unique(items) { return [...new Set(items)]; }
+
+function transitionState(updateFn) {
+  if (document.startViewTransition) {
+    document.startViewTransition(updateFn);
+  } else {
+    updateFn();
+  }
+}
 
 // ─────────── DATASET HELPERS ─────────────────────────────────────
 function currentClassLevel() { return els.classSelect.value; }
@@ -371,7 +389,7 @@ function generatePaper() {
   state.selectedQuestions = selected.sort(
     (a, b) => typeOrder.indexOf(a.questionType) - typeOrder.indexOf(b.questionType) || a.chapterNumber - b.chapterNumber
   );
-  renderPreview();
+  transitionState(() => renderPreview());
 }
 
 function replaceQuestion(id) {
@@ -386,19 +404,27 @@ function replaceQuestion(id) {
     pool[0];
   if (!best) { alert("No replacement available for this chapter."); return; }
   state.selectedQuestions = state.selectedQuestions.map((q) => (q.id === id ? best : q));
-  renderPreview();
+  
+  transitionState(() => {
+    renderPreview();
+    const newEl = els.questions.querySelector(`[data-id="${best.id}"]`);
+    if (newEl) {
+      newEl.classList.add("just-swapped");
+      setTimeout(() => newEl.classList.remove("just-swapped"), 500);
+    }
+  });
 }
 
 function toggleLock(id) {
   if (state.lockedIds.has(id)) state.lockedIds.delete(id);
   else state.lockedIds.add(id);
-  renderPreview();
+  transitionState(() => renderPreview());
 }
 
 function removeQuestion(id) {
   state.lockedIds.delete(id);
   state.selectedQuestions = state.selectedQuestions.filter((q) => q.id !== id);
-  renderPreview();
+  transitionState(() => renderPreview());
 }
 
 function groupedCounts(items, key) {
@@ -415,6 +441,42 @@ function renderSummary() {
     <div class="stat"><strong>${byCh}</strong><span>Chapters</span></div>
     <div class="stat"><strong>${byDiff.Easy || 0}/${byDiff.Medium || 0}/${byDiff.Hard || 0}</strong><span>E / M / H marks</span></div>
   `;
+}
+
+let dragSrcEl = null;
+
+function handleDragStart(e) {
+  const card = e.target.closest(".question");
+  if (!card) return;
+  dragSrcEl = card;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', card.dataset.index);
+  setTimeout(() => card.classList.add('dragging'), 0);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  const card = e.target.closest(".question");
+  if (!card || card === dragSrcEl) return;
+  e.dataTransfer.dropEffect = 'move';
+  
+  const rect = card.getBoundingClientRect();
+  const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+  els.questions.insertBefore(dragSrcEl, next ? card.nextSibling : card);
+}
+
+function handleDragEnd(e) {
+  const card = e.target.closest(".question");
+  if (card) {
+    card.classList.remove('dragging');
+    card.removeAttribute('draggable');
+  }
+  
+  const newOrderIds = [...els.questions.querySelectorAll(".question")].map(q => q.dataset.id);
+  const reordered = newOrderIds.map(id => state.selectedQuestions.find(q => q.id === id));
+  state.selectedQuestions = reordered;
+  
+  transitionState(() => renderPreview());
 }
 
 function renderPreview() {
@@ -437,9 +499,17 @@ function renderPreview() {
     const options = q.options
       ? `<p class="options">A. ${q.options.A}<br/>B. ${q.options.B}<br/>C. ${q.options.C}<br/>D. ${q.options.D}</p>`
       : "";
-    return `<article class="question${locked ? " locked" : ""}">
-      <div class="question-head"><span>Q${i + 1} · ${q.id}</span><span>${q.marks} mark${q.marks === 1 ? "" : "s"}</span></div>
-      <div class="question-text">${q.question}</div>
+    const imagePreview = q.imageUrl
+      ? `<div class="question-image-container"><img class="question-image" src="${q.imageUrl}" alt="Diagram for ${q.id}" /></div>`
+      : "";
+    return `<article class="question${locked ? " locked" : ""}" data-id="${q.id}" data-index="${i}">
+      <div class="question-head">
+        <span>Q${i + 1} · ${q.id}</span>
+        <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+        <span>${q.marks} mark${q.marks === 1 ? "" : "s"}</span>
+      </div>
+      <div class="question-text">${renderMarkdownToHtml(q.question)}</div>
+      ${imagePreview}
       ${options}
       <div class="tags">
         <span class="tag">Ch ${q.chapterNumber}</span>
@@ -498,15 +568,43 @@ function renderSubjectOptions(preferredSubject) {
   if (preferredSubject && subjects.includes(preferredSubject)) els.subjectSelect.value = preferredSubject;
 }
 
+function applyTheme() {
+  const subject = currentSubject();
+  const body = document.body;
+
+  // Remove existing theme classes
+  body.className = body.className.replace(/\btheme-\S+/g, "");
+
+  // Add new theme class
+  let themeColor = "#1e40af"; // default blue
+  if (subject) {
+    const slug = subject.toLowerCase().replace(/\s+/g, "-");
+    const themeClass = `theme-${slug}`;
+    body.classList.add(themeClass);
+
+    if (slug === "science") themeColor = "#059669";
+    else if (slug === "maths" || slug === "mathematics" || slug === "physics" || slug === "chemistry") themeColor = "#2563eb";
+    else if (slug === "english") themeColor = "#db2777";
+    else if (slug === "hindi") themeColor = "#ea580c";
+    else if (slug === "social-science" || slug === "evs" || slug === "biology") themeColor = "#7c3aed";
+  }
+
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute("content", themeColor);
+}
+
 function resetDatasetView() {
-  state.selectedQuestions = [];
-  state.lockedIds.clear();
-  els.chapterRows.innerHTML = "";
-  renderTypeFilters();
-  const chapters = chaptersForCurrentDataset();
-  if (chapters.length) addChapterRow(chapters[0].chapterNumber, 100);
-  updateDatasetStatus();
-  renderPreview();
+  transitionState(() => {
+    applyTheme();
+    state.selectedQuestions = [];
+    state.lockedIds.clear();
+    els.chapterRows.innerHTML = "";
+    renderTypeFilters();
+    const chapters = chaptersForCurrentDataset();
+    if (chapters.length) addChapterRow(chapters[0].chapterNumber, 100);
+    updateDatasetStatus();
+    renderPreview();
+  });
 }
 
 function updateDatasetStatus() {
@@ -558,14 +656,91 @@ function xmlEscape(val) {
     .replace(/'/g, "&apos;");
 }
 
-function paragraph(text, opts = {}) {
-  const bold = opts.bold ? "<w:b/>" : "";
+function parseTextToRuns(text) {
+  const regex = /(\*\*.*?\*\*|\*.*?\*|[\n])/g;
+  const parts = text.split(regex);
+  const runs = [];
+  for (const part of parts) {
+    if (!part) continue;
+    if (part.startsWith('**') && part.endsWith('**')) {
+      runs.push({ text: part.slice(2, -2), bold: true });
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      runs.push({ text: part.slice(1, -1), italic: true });
+    } else if (part === '\n') {
+      runs.push({ break: true });
+    } else {
+      runs.push({ text: part });
+    }
+  }
+  return runs;
+}
+
+function renderMarkdownToHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/\n/g, "<br/>");
+}
+
+function paragraph(content, opts = {}) {
   const size = opts.size ? `<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>` : "";
   const jc = opts.align ? `<w:pPr><w:jc w:val="${opts.align}"/></w:pPr>` : "";
-  return `<w:p>${jc}<w:r><w:rPr>${bold}${size}</w:rPr><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r></w:p>`;
+  
+  let runsXml = "";
+  if (Array.isArray(content)) {
+    content.forEach((run) => {
+      if (run.break) {
+        runsXml += `<w:r><w:br/></w:r>`;
+      } else {
+        const bold = (run.bold || opts.bold) ? "<w:b/>" : "";
+        const italic = (run.italic || opts.italic) ? "<w:i/>" : "";
+        runsXml += `<w:r><w:rPr>${bold}${italic}${size}</w:rPr><w:t xml:space="preserve">${xmlEscape(run.text)}</w:t></w:r>`;
+      }
+    });
+  } else {
+    return paragraph(parseTextToRuns(String(content)), opts);
+  }
+  
+  return `<w:p>${jc}${runsXml}</w:p>`;
 }
 
 function pageBreak() { return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; }
+
+function makeDrawingXml(relId) {
+  return `<w:drawing>
+    <wp:inline distT="0" distB="0" distL="0" distR="0">
+      <wp:extent cx="2857500" cy="2142900"/>
+      <wp:docPr id="1" name="Question Diagram" descr="Diagram"/>
+      <wp:cNvGraphicFramePr>
+        <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+      </wp:cNvGraphicFramePr>
+      <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+          <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:nvPicPr>
+              <pic:cNvPr id="1" name="image.png"/>
+              <pic:cNvPicPr/>
+            </pic:nvPicPr>
+            <pic:blipFill>
+              <a:blip r:embed="${relId}"/>
+              <a:stretch><a:fillRect/></a:stretch>
+            </pic:blipFill>
+            <pic:spPr>
+              <a:xfrm>
+                <a:off x="0" y="0"/>
+                <a:ext cx="2857500" cy="2142900"/>
+              </a:xfrm>
+              <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+            </pic:spPr>
+          </pic:pic>
+        </a:graphicData>
+      </a:graphic>
+    </wp:inline>
+  </w:drawing>`;
+}
 
 function makeDocumentXml(payload) {
   const test = payload.test;
@@ -586,6 +761,9 @@ function makeDocumentXml(payload) {
     const section = `${q.questionType} Questions`;
     if (section !== currentSection) { currentSection = section; body += paragraph(section, { bold: true, size: 24 }); }
     body += paragraph(`${i + 1}. [${q.marks} mark${q.marks === 1 ? "" : "s"}] ${q.question}`);
+    if (q.imgRelId) {
+      body += `<w:p><w:r>${makeDrawingXml(q.imgRelId)}</w:r></w:p>`;
+    }
     if (q.questionType === "MCQ" && q.options) {
       body += paragraph(`   A. ${q.options.A}`);
       body += paragraph(`   B. ${q.options.B}`);
@@ -601,6 +779,9 @@ function makeDocumentXml(payload) {
   body += paragraph("");
   questions.forEach((q, i) => {
     body += paragraph(`${i + 1}. ${q.answer}`, { bold: true });
+    if (q.imgRelId) {
+      body += `<w:p><w:r>${makeDrawingXml(q.imgRelId)}</w:r></w:p>`;
+    }
     if (q.explanation) body += paragraph(`Explanation: ${q.explanation}`);
     body += paragraph(`Tags: ${q.chapterName}; ${q.topic}; ${q.difficulty}; ${q.questionType}; ${q.questionStyle || "Direct Recall"}; ${q.marks} mark(s)`);
     if (q.sourceType || q.pyqYear) {
@@ -625,6 +806,8 @@ function makeDocumentXml(payload) {
   xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
   xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"
   xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
   mc:Ignorable="w14 wp14">
   <w:body>
     ${body}
@@ -638,20 +821,78 @@ function makeDocumentXml(payload) {
 
 async function buildDocxBlob(payload) {
   const zip = new JSZip(); // eslint-disable-line no-undef
+  const questions = payload.questions || [];
+
+  // Fetch diagram images asynchronously
+  const imgMap = new Map();
+  let imgIndex = 1;
+  for (const q of questions) {
+    if (q.imageUrl && !imgMap.has(q.imageUrl)) {
+      try {
+        const res = await fetch(q.imageUrl, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const blob = await res.blob();
+          let ext = "png";
+          if (blob.type === "image/jpeg" || blob.type === "image/jpg") ext = "jpeg";
+          else if (blob.type === "image/gif") ext = "gif";
+          
+          const filename = `media/image_${imgIndex}.${ext}`;
+          const relId = `rIdImg${imgIndex}`;
+          
+          imgMap.set(q.imageUrl, {
+            relId,
+            filename,
+            data: blob,
+            ext
+          });
+          imgIndex++;
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch image ${q.imageUrl}:`, err);
+      }
+    }
+    
+    if (q.imageUrl && imgMap.has(q.imageUrl)) {
+      q.imgRelId = imgMap.get(q.imageUrl).relId;
+    } else {
+      q.imgRelId = null;
+    }
+  }
+
   zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="gif" ContentType="image/gif"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`);
+
   zip.folder("_rels").file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`);
+
   const word = zip.folder("word");
-  word.folder("_rels").file("document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+
+  if (imgMap.size > 0) {
+    const media = word.folder("media");
+    for (const img of imgMap.values()) {
+      media.file(img.filename.replace("media/", ""), img.data);
+    }
+  }
+
+  let relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`;
+  for (const img of imgMap.values()) {
+    relsXml += `<Relationship Id="${img.relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${img.filename}"/>`;
+  }
+  relsXml += `</Relationships>`;
+  word.folder("_rels").file("document.xml.rels", relsXml);
+
   word.file("styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
@@ -659,7 +900,9 @@ async function buildDocxBlob(payload) {
     <w:rPr><w:rFonts w:ascii="Aptos" w:hAnsi="Aptos"/><w:sz w:val="22"/></w:rPr>
   </w:style>
 </w:styles>`);
+
   word.file("document.xml", makeDocumentXml(payload));
+
   return zip.generateAsync({
     type: "blob",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -677,6 +920,8 @@ async function fetchBankWithFallback() {
     try {
       const url = new URL(sheetsUrl);
       url.searchParams.set("action", "getBank");
+      const passcode = getSheetsPasscode();
+      if (passcode) url.searchParams.set("passcode", passcode);
       url.searchParams.set("_ts", Date.now()); // bust cache
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
@@ -753,6 +998,7 @@ async function loadQuestionBank(options = {}) {
       }
     }
     if (!savedRows.length && chapters.length) addChapterRow(chapters[0].chapterNumber, 100);
+    applyTheme();
     updateDatasetStatus();
     renderPreview();
   } else {
@@ -772,7 +1018,7 @@ async function recordInSheets(payload) {
     await fetch(sheetsUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "recordPaper", payload }),
+      body: JSON.stringify({ action: "recordPaper", passcode: getSheetsPasscode(), payload }),
       signal: AbortSignal.timeout(10000)
     });
   } catch (e) {
@@ -857,6 +1103,7 @@ async function loadLog() {
 // ─────────── SETTINGS MODAL ──────────────────────────────────────
 function openSettings() {
   if (els.sheetsUrlInput) els.sheetsUrlInput.value = getSheetsUrl();
+  if (els.sheetsPasscodeInput) els.sheetsPasscodeInput.value = getSheetsPasscode();
   if (els.settingsModal) {
     els.settingsModal.classList.add("open");
     els.settingsModal.removeAttribute("hidden");
@@ -875,6 +1122,24 @@ async function init() {
   if (!getSheetsUrl()) openSettings();
 
   await Promise.all([loadQuestionBank(), loadLog()]);
+
+  // Drag and drop listeners
+  if (els.questions) {
+    els.questions.addEventListener('dragstart', handleDragStart);
+    els.questions.addEventListener('dragover', handleDragOver);
+    els.questions.addEventListener('dragend', handleDragEnd);
+    els.questions.addEventListener('mousedown', (e) => {
+      const handle = e.target.closest('.drag-handle');
+      if (handle) {
+        const card = handle.closest('.question');
+        if (card) card.setAttribute('draggable', 'true');
+      }
+    });
+    els.questions.addEventListener('mouseup', (e) => {
+      const card = e.target.closest('.question');
+      if (card) card.removeAttribute('draggable');
+    });
+  }
 
   // Register service worker
   if ("serviceWorker" in navigator) {
@@ -898,6 +1163,7 @@ async function init() {
   if (els.saveSettingsBtn) {
     els.saveSettingsBtn.addEventListener("click", () => {
       setSheetsUrl(els.sheetsUrlInput.value);
+      setSheetsPasscode(els.sheetsPasscodeInput.value);
       closeSettings();
       loadQuestionBank({ keepPaper: true });
     });

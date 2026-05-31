@@ -56,19 +56,41 @@ const QUESTION_FIELDS = [
   "Last Asked Date",
   "Last Paper ID",
   "Last Updated",
-  "Notes"
+  "Notes",
+  "Image URL"
 ];
 
 function doGet(event) {
+  const incomingPasscode = event.parameter.passcode || "";
+  if (!validatePasscode(incomingPasscode)) {
+    return jsonResponse({ ok: false, error: "Unauthorized: Invalid passcode" });
+  }
   const action = event.parameter.action || "getBank";
   if (action === "getBank") return jsonResponse(getQuestionBank());
   return jsonResponse({ ok: false, error: "Unknown action" });
 }
 
 function doPost(event) {
-  const body = JSON.parse(event.postData.contents || "{}");
+  let body = {};
+  try {
+    body = JSON.parse(event.postData.contents || "{}");
+  } catch (e) {
+    return jsonResponse({ ok: false, error: "Invalid JSON body" });
+  }
+  const incomingPasscode = body.passcode || "";
+  if (!validatePasscode(incomingPasscode)) {
+    return jsonResponse({ ok: false, error: "Unauthorized: Invalid passcode" });
+  }
   if (body.action === "recordPaper") return jsonResponse(recordPaper(body.payload));
   return jsonResponse({ ok: false, error: "Unknown action" });
+}
+
+function validatePasscode(incoming) {
+  const securePasscode = PropertiesService.getScriptProperties().getProperty("PASSCODE") || "";
+  if (!securePasscode) {
+    return true; // No passcode configured in Apps Script properties, allow bypass for backward compatibility.
+  }
+  return incoming === securePasscode;
 }
 
 function jsonResponse(value) {
@@ -200,7 +222,8 @@ function rowToQuestion(headers, row, rowNumber) {
     lastAskedDate: stringifyDate(data["Last Asked Date"]),
     lastPaperId: String(data["Last Paper ID"] || "").trim(),
     lastUpdated: stringifyDate(data["Last Updated"]),
-    notes: String(data["Notes"] || "").trim()
+    notes: String(data["Notes"] || "").trim(),
+    imageUrl: String(data["Image URL"] || data["Image"] || "").trim()
   };
 }
 
