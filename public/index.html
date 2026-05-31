@@ -17,14 +17,14 @@
   </head>
   <body class="bg-brand-50 text-brand-900 font-sans min-h-screen flex flex-col">
     <!-- Header -->
-    <header class="h-20 flex items-center justify-between px-6 border-b border-slate-200/80 bg-white sticky top-0 z-10">
-      <div class="flex items-center gap-4">
-        <img src="logo.png" alt="Logo" class="h-16 w-auto scale-125 origin-left object-contain" onerror="this.style.display='none'" />
-        <h1 class="text-[18px] font-bold text-slate-900 tracking-tight">SAH Microtest Builder</h1>
+    <header class="h-16 sm:h-20 flex items-center justify-between px-4 sm:px-6 border-b border-slate-200/80 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+        <img src="logo.png" alt="Logo" class="h-10 sm:h-16 w-auto scale-125 origin-left object-contain" onerror="this.style.display='none'" />
+        <h1 class="hidden md:block text-[18px] font-bold text-slate-900 tracking-tight">SAH Microtest Builder</h1>
       </div>
-      <div class="flex items-center gap-3">
-        <div id="activeDatasetPill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 border border-slate-200 text-slate-600 shadow-sm">
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Loading…
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div id="activeDatasetPill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 border border-slate-200 text-slate-600 shadow-sm truncate">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span><span class="truncate">Loading…</span>
         </div>
         <div class="h-4 w-px bg-slate-200"></div>
         <button id="settingsBtn" class="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors" title="Settings">
@@ -85,11 +85,11 @@
 
         <!-- Chapter Blueprint -->
         <section class="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          <div class="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h2 class="text-[13px] font-semibold text-slate-900 uppercase tracking-wider">Chapter Blueprint</h2>
             <button id="addChapter" class="px-2 py-1 text-[11px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded hover:bg-indigo-100 transition-colors">+ Add</button>
           </div>
-          <div class="p-6">
+          <div class="p-4 sm:p-6">
             <div id="chapterRows" class="flex flex-col gap-3 mb-4 w-full"></div>
             <div id="chapterSplitBar" class="flex w-full h-2 bg-slate-100 rounded-full overflow-hidden my-6 hidden gap-[2px]"></div>
             <div class="flex items-center justify-between mt-2">
@@ -101,10 +101,10 @@
 
         <!-- Question Parameters -->
         <section class="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <div class="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h2 class="text-[13px] font-semibold text-slate-900 uppercase tracking-wider">Parameters</h2>
           </div>
-          <div class="p-6">
+          <div class="p-4 sm:p-6">
             <span class="block text-[12px] font-medium text-slate-700 mb-3">Difficulty Weights</span>
             <div class="grid grid-cols-3 gap-3 mb-8">
               <label class="flex flex-col gap-1.5 text-[12px] font-medium text-slate-600">
@@ -141,8 +141,8 @@
       <div class="flex flex-col gap-6">
         
         <!-- Preview Panel -->
-        <section class="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6 lg:p-10 w-full overflow-hidden min-h-[600px] flex flex-col">
-          <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-6 border-b border-slate-100 gap-2">
+        <section class="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 sm:p-6 lg:p-10 w-full overflow-hidden min-h-[300px] md:min-h-[600px] flex flex-col">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 sm:mb-6 border-b border-slate-100 gap-2">
             <h2 class="text-base font-semibold text-slate-900">Preview Paper</h2>
             <span id="paperMeta" class="text-[12px] font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md hidden"></span>
           </div>
@@ -239,12 +239,10 @@
 
     <!-- ── Chapter Row Template ─────────────────────────────── -->
     <template id="chapterRowTemplate">
-      <div class="chapter-row flex items-center gap-2 w-full p-2 bg-slate-50 border border-slate-200/60 rounded-lg">
-        <select class="chapter-select flex-1 min-w-0 w-full h-[34px] px-2 bg-white border border-slate-200 rounded-md focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 text-[12px] text-slate-700 truncate shadow-sm transition-all appearance-none" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.5rem top 50%; background-size: 0.65rem auto; padding-right: 1.5rem;">
-          <option value="" disabled selected>— Select a chapter —</option>
-        </select>
+      <div class="chapter-row flex items-center gap-1.5 sm:gap-2 w-full p-2 sm:p-2.5 bg-slate-50 border border-slate-100 rounded-lg hover:border-indigo-200 transition-colors">
+        <select class="chapter-select flex-1 min-w-[100px] max-w-[180px] h-[34px] px-2 text-[13px] bg-white border border-slate-200 rounded-md focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 focus:outline-none truncate font-medium text-slate-700"></select>
         <div class="flex items-center gap-1.5 shrink-0 ml-auto">
-          <span class="text-[11px] font-medium text-slate-500">Target %</span>
+          <span class="text-[11px] font-medium text-slate-500 hidden sm:inline">Target %</span>
           <input class="chapter-pct w-12 h-[34px] px-1 text-center text-[13px] font-semibold text-indigo-700 bg-white border border-slate-200 rounded-md focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all" type="number" min="0" step="5" value="10" aria-label="Chapter target percentage" />
         </div>
         <button class="icon-button remove-chapter p-1.5 shrink-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Remove chapter">
