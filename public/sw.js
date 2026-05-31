@@ -4,15 +4,15 @@
 const CACHE = "sah-v1";
 
 const SHELL = [
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/app.js",
-  "/jszip.min.js",
-  "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/logo.png"
+  "./",
+  "index.html",
+  "styles.css",
+  "app.js",
+  "jszip.min.js",
+  "manifest.json",
+  "icon-192.png",
+  "icon-512.png",
+  "logo.png"
 ];
 
 // ── Install: pre-cache the app shell ──────────────────────────────

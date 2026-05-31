@@ -878,7 +878,7 @@ async function init() {
 
   // Register service worker
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch((e) => console.warn("SW registration failed:", e));
+    navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW registration failed:", e));
   }
 
   // Core controls
