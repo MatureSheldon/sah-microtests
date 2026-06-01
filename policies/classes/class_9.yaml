@@ -1,0 +1,43 @@
+# Class 9 — generation policy (Scholars Academic Home / NCERT early secondary)
+
+class_level: "9"
+label: "Class 9"
+
+pedagogy:
+  stage: early_secondary
+  language:
+    tone: clear_and_encouraging
+    avoid: patronising_or_overly_academic_jargon_without_support
+  contexts:
+    rule: age_appropriate
+    prefer:
+      - school_life
+      - local_environment
+      - familiar_objects_and_phenomena
+      - Indian_curriculum_familiar_examples
+    avoid:
+      - adult_professional_scenarios_without_scaffold
+      - culturally_insensitive_or_exclusionary_framing
+
+difficulty:
+  default_mix:
+    Easy: predominant
+    Medium: common
+    Hard: rare
+  hard_questions:
+    only_when: explicitly_guided_in_job_or_approved_plan
+    requires: clear_scaffold_and_defined_success_criteria
+
+progression:
+  # Within a chapter, move students along this ladder unless a job overrides.
+  sequence:
+    - recognition      # identify, recall, match
+    - application      # use idea in a familiar situation
+    - explanation      # justify, compare, interpret with reasoning
+  rule: scaffolded_progression
+  note: Do not jump to multi-step explanation items before recognition and application are covered for the subtopic.
+
+question_design:
+  marks: align_to_cbse_microtest_norms_unless_job_specifies
+  explanations: teacher_reference_quality_indicative_where_open_ended
+  use_in_papers: "Yes"

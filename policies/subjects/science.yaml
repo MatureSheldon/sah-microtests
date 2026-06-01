@@ -1,0 +1,44 @@
+# Class 9 Science — subject generation policy
+
+subject: Science
+display_name: Science
+
+pedagogy:
+  priority: observation_before_definition
+  reasoning:
+    - experiment_and_evidence_based_where_applicable
+    - cause_effect_and_process_chains_not_label_memorisation_alone
+  contexts:
+    prefer:
+      - everyday_phenomena
+      - observable_school_and_home_examples
+      - Indian_environment_familiarity
+  explanations:
+    rule: connect_observation_to_concept_to_prediction
+
+question_design:
+  prefer:
+    - predict_observe_explain_sequences
+    - compare_and_contrast_with_evidence
+    - apply_concepts_to_novel_but_familiar_situations
+  avoid:
+    - vague_textbook_activity_references  # e.g. "see Activity 3.2" without the prompt
+    - questions_that_require_unseen_diagram_or_passage_not_included_in_stem
+
+case_source_based:
+  rule: self_contained
+  requirement: include_all_data_passage_or_scenario_needed_in_question_stem_or_same_row_asset
+
+assets:
+  when_useful:
+    - labelled_diagrams
+    - data_tables
+    - simple_experimental_setups
+    - graphs_and_charts
+  storage: same_row_asset_columns_only
+
+ncert:
+  textbook_questions:
+    source_type: "NCERT Textbook Question"
+    reference_format: "Class 9 Science, Chapter {n}, {section_or_activity}"
+    rule: quote_or_paraphrase_the_actual_prompt_not_only_pointer_text

@@ -1,0 +1,52 @@
+# Class 9 Mathematics — subject generation policy
+
+subject: Maths
+display_name: Mathematics
+
+pedagogy:
+  priority: understanding_before_formula
+  student_work:
+    - form_rules_from_patterns
+    - build_equations_from_situations
+    - construct_models_not_only_apply_memorised_formulae
+  representations:
+    use_when_helpful:
+      - visual
+      - numerical
+      - algebraic
+      - graphical
+  contexts:
+    rule: real_life_where_genuine
+    avoid:
+      - fake_or_contrived_stories
+      - names_and_numbers_plucked_without_purpose
+  solutions:
+    style: stepwise
+    show: reasoning_and_intermediate_steps_not_only_final_answer
+  misconceptions:
+    rule: correct_common_errors_explicitly_in_explanation_when_relevant
+
+question_design:
+  avoid:
+    - pure_substitution_overload
+    - drill_without_conceptual_anchor
+  prefer:
+    - why_and_how_before_what
+    - interpret_graphs_tables_and_diagrams
+    - justify_steps
+
+case_source_based:
+  applies_when: "Question Type = Case/Source-Based"
+  sub_parts:
+    labels: ["(i)", "(ii)", "(iii)"]
+    marks: [1, 1, 2]
+    total_marks: 4
+  rule: exactly_three_subparts_with_these_labels_and_marks
+
+assets:
+  when_useful:
+    - coordinate_plane_sketches
+    - geometric_figures
+    - tables_of_values
+    - simple_graphs
+  storage: same_row_asset_columns_only

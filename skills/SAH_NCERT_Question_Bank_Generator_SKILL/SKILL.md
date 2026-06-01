@@ -131,11 +131,11 @@ For **Subject = Maths** and **Question Type = Case/Source-Based**:
 ## Workflow
 
 1. **Inputs** — class, subject, chapter list, textbook sections (PDF/text).
-2. **Plan** — topics/subtopics, type mix, NCERT lifts vs originals; save approved plans under `approved_plans/` when directed.
+2. **Plan** — topics/subtopics, type mix, NCERT lifts vs originals; save approved plans under `tools/question_bank_agent/approved_plans/` when directed. Load `policies/classes/` and `policies/subjects/` YAML for the job.
 3. **Draft rows** — per chapter; assign IDs, types, styles, marks, assets.
 4. **Validate** — schema, IDs, MCQ options, marks, Maths case format, `Use in Papers`, KaTeX-safe text, asset columns.
 5. **Consolidate** — merge all chapters into one `Questions` sheet; sort by `Chapter No.`
-6. **Write workbook** — `tools/question_bank_agent/outputs/{class}-{subject}.xlsx` (gitignored until user commits intentionally).
+6. **Write workbook** — `tools/question_bank_agent/outputs/workbooks/{class}-{subject}.xlsx` (gitignored until user commits intentionally).
 
 ## Validation checklist
 

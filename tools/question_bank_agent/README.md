@@ -1,6 +1,20 @@
 # SAH Question Bank Agent Tooling
 
-Python helpers for validating subject workbooks before handoff to Google Sheets.
+Python helpers and agent layout for NCERT question-bank generation.
+
+## Layout
+
+```text
+policies/classes/          # e.g. class_9.yaml
+policies/subjects/           # e.g. mathematics.yaml, science.yaml
+sources/question_bank/       # chapter inputs per class/subject
+tools/question_bank_agent/
+  jobs/                      # job JSON definitions
+  approved_plans/            # tracked approved direction files
+  outputs/plans/             # generated plans (gitignored)
+  outputs/workbooks/         # final .xlsx (gitignored)
+  src/agents/                # agent implementations
+```
 
 ## Setup
 
@@ -20,11 +34,7 @@ Exit code `0` = pass; `1` = validation errors.
 
 ## Outputs
 
-Write final `.xlsx` files to `outputs/` (gitignored):
-
-```text
-tools/question_bank_agent/outputs/{class}-{subject}.xlsx
-```
+Write final `.xlsx` files to `outputs/workbooks/` (gitignored).
 
 ## Schema
 

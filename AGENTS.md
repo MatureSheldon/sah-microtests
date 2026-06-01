@@ -76,4 +76,6 @@ When the user approves, they may run:
 
 ## Ignored paths
 
-Generated outputs under `tools/question_bank_agent/outputs/` are gitignored. **`approved_plans/` is not ignored** — commit approved plans when the user asks.
+Generated outputs under `tools/question_bank_agent/outputs/` are gitignored. **`tools/question_bank_agent/approved_plans/` is not ignored** — commit approved plans when the user asks.
+
+Policies live under `policies/classes/` and `policies/subjects/`. Source inputs under `sources/question_bank/`.

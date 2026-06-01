@@ -19,4 +19,4 @@ Thumbs.db
 exports/
 data/
 
-# Note: approved_plans/ is intentionally NOT ignored.
+# Note: tools/question_bank_agent/approved_plans/ is intentionally NOT ignored.
