@@ -215,12 +215,14 @@
     
     <div class="modal-overlay hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" id="topicModal" role="dialog" aria-modal="true">
       <div class="modal-card bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-        <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h2 id="topicModalTitle" class="text-[14px] font-semibold text-slate-900">Add More Questions</h2>
-            <p id="topicModalSubtitle" class="text-[12px] text-slate-500 mt-0.5">Select a type</p>
+        <div class="px-4 py-4 border-b border-slate-100 bg-white">
+          <div class="flex justify-between items-start mb-2">
+            <h2 class="text-[15px] font-semibold text-slate-900">Explore this Topic</h2>
+            <button id="closeTopicModalBtn" class="p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors -mt-1 -mr-1">✕</button>
           </div>
-          <button id="closeTopicModalBtn" class="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors">✕</button>
+          <p class="text-[13px] text-slate-600 leading-relaxed">
+            Found more questions matching <strong id="topicModalTopicName" class="font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100/50"></strong>. Select a question type below to either swap it with your current question or add it as a new one.
+          </p>
         </div>
         <div class="p-4 overflow-y-auto flex-1">
           <div id="topicTypeGrid" class="grid grid-cols-2 gap-2">
@@ -255,6 +257,6 @@
     <div class="hidden bg-indigo-400 bg-emerald-400 bg-amber-400 bg-rose-400 bg-cyan-400 bg-violet-400"></div>
     <script src="katex.min.js"></script>
     <script src="jszip.min.js"></script>
-    <script src="app-v2.js?v=5"></script>
+    <script src="app-v2.js?v=6"></script>
   </body>
 </html>

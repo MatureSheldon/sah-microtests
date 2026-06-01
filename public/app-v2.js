@@ -137,7 +137,7 @@ const els = {
   cancelFlagBtn: document.querySelector("#cancelFlagBtn"),
   cancelFlagBtnSecondary: document.querySelector("#cancelFlagBtnSecondary"),
   topicModal: document.querySelector("#topicModal"),
-  topicModalName: document.querySelector("#topicModalTitle"),
+  topicModalName: document.querySelector("#topicModalTopicName"),
   topicTypeGrid: document.querySelector("#topicTypeGrid"),
   topicSwapBtn: document.querySelector("#topicSwapBtn"),
   topicAddBtn: document.querySelector("#topicAddBtn"),
