@@ -13,7 +13,7 @@ tools/question_bank_agent/
   approved_plans/            # tracked approved direction files
   outputs/plans/             # generated plans (gitignored)
   outputs/workbooks/         # final .xlsx (gitignored)
-  src/agents/                # agent implementations
+  src/                       # generic engine (plan, generate, validate, xlsx)
 ```
 
 ## Setup
@@ -24,11 +24,32 @@ source .venv/bin/activate
 pip install -r tools/question_bank_agent/requirements.txt
 ```
 
+## Plan a subject (direction only)
+
+```sh
+python tools/question_bank_agent/src/plan_subject.py tools/question_bank_agent/jobs/class_9_maths_plan.json
+```
+
+Writes `outputs/plans/*_direction.json` and `.md` with `approved_direction: false`.
+
+## Generate a subject workbook
+
+1. Review the plan, copy to `approved_plans/`, set `"approved_direction": true`.
+2. Run:
+
+```sh
+python tools/question_bank_agent/src/generate_subject.py tools/question_bank_agent/jobs/class_9_maths_generate.json
+```
+
+Requires `OPENAI_API_KEY` in repo-root `.env`.
+
 ## Validate a workbook
 
 ```sh
-python tools/question_bank_agent/validate_workbook.py path/to/class-9-science.xlsx
+python tools/question_bank_agent/validate_workbook.py path/to/workbook.xlsx
 ```
+
+Or use the shared engine module: `tools/question_bank_agent/src/validator.py`.
 
 Exit code `0` = pass; `1` = validation errors.
 
