@@ -1,5 +1,7 @@
 # SAH Microtests Project Context
 
+> **Agents:** For question-bank generation tooling, read [AGENTS.md](AGENTS.md) and [skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md](skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md) first.
+
 SAH Microtests is a local dashboard for Scholars Academic Home, Haldwani, to generate weekly microtests from a structured question bank. The product is being built first for Class 9 Science, but the dashboard is designed for multiple classes and subjects.
 
 ## What The System Does

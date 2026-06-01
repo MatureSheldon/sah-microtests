@@ -1,0 +1,38 @@
+---
+description: SAH question-bank agent system — read AGENTS.md and NCERT skill before bank work; git checkpoint policy.
+alwaysApply: true
+---
+
+# SAH Question Bank Agent System
+
+## Before any question-bank work
+
+1. Read [AGENTS.md](../../AGENTS.md) at the repository root.
+2. Read [skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md](../../skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md).
+
+Apply both for generation, review, retrofit, validation, consolidation, Excel output, asset columns, and schema changes.
+
+## Repository boundary
+
+- All question-bank automation stays inside **sah-microtests** (this repo).
+- Do **not** create or use a separate repository.
+
+## Output reminders
+
+- Final subject output: **one Excel workbook**, sheet **`Questions`**, all chapters in one sheet sorted by chapter number.
+- Preserve SAH schema exactly; assets in same-row columns only (no `Question Assets` sheet).
+- Maths Case/Source-Based: sub-parts **(i) (ii) (iii)** with marks **1 + 1 + 2**.
+- `Use in Papers` = **Yes** for selectable rows.
+- Validate before writing the final workbook.
+
+## Git checkpoint rule
+
+After every **major build** or successful implementation step, stop and ask:
+
+> Major build complete. Do you want to commit and push this checkpoint?
+
+**Never** run `git add`, `git commit`, or `git push` without explicit user approval.
+
+Major builds include: agent scripts, policies, skills, GitHub Actions workflows, job JSON files, successful planning/generation runs, approved direction files, and major validation fixes.
+
+If approved, the user may run `./tools/dev/git_checkpoint.sh`.

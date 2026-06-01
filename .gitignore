@@ -1,5 +1,12 @@
 # Local configuration and credentials
 config.json
+.env
+
+# Python / agent tooling
+.venv/
+__pycache__/
+*.pyc
+tools/question_bank_agent/outputs/
 
 # Dependencies
 node_modules/
@@ -11,3 +18,5 @@ Thumbs.db
 # Output exports and local databases (from deprecated server)
 exports/
 data/
+
+# Note: approved_plans/ is intentionally NOT ignored.
