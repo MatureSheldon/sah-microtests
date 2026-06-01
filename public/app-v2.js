@@ -137,7 +137,7 @@ const els = {
   cancelFlagBtn: document.querySelector("#cancelFlagBtn"),
   cancelFlagBtnSecondary: document.querySelector("#cancelFlagBtnSecondary"),
   topicModal: document.querySelector("#topicModal"),
-  topicModalName: document.querySelector("#topicModalName"),
+  topicModalName: document.querySelector("#topicModalTitle"),
   topicTypeGrid: document.querySelector("#topicTypeGrid"),
   topicSwapBtn: document.querySelector("#topicSwapBtn"),
   topicAddBtn: document.querySelector("#topicAddBtn"),
@@ -322,7 +322,7 @@ function distributeChaptersEqually() {
 }
 
 // ─────────── SPLIT BAR ───────────────────────────────────────────
-const barColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-cyan-400", "bg-violet-400"];
+const barColors = ["bg-indigo-400/60", "bg-emerald-400/60", "bg-amber-400/60", "bg-rose-400/60", "bg-cyan-400/60", "bg-violet-400/60"];
 
 function renderSplitBar() {
   const bar = els.chapterSplitBar;
@@ -725,13 +725,13 @@ function renderPreview() {
         ${assetAt("After Question")}
         
         <!-- Action Footer -->
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-          <button type="button" class="px-3 py-1.5 rounded-md bg-blue-50/50 text-blue-600 border border-blue-100 text-[11px] font-medium hover:bg-blue-100 transition-colors flex items-center gap-1.5" data-topic-action="${q.id}">
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <button type="button" class="px-3 py-1.5 rounded-md bg-blue-50/50 text-blue-600 border border-blue-100 text-[11px] font-medium hover:bg-blue-100 transition-colors flex items-center gap-1.5 shrink-0" data-topic-action="${q.id}">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             More from Topic
           </button>
           
-          <div class="flex items-center gap-1.5">
+          <div class="flex flex-wrap items-center gap-1.5 justify-end">
             <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100" type="button" data-swap="${q.id}">Swap</button>
             <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${lockBtnClass}" type="button" data-lock="${q.id}">${locked ? "Unlock" : "Lock"}</button>
             <button class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50" type="button" data-flag="${q.id}">Flag</button>
