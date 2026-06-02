@@ -12,7 +12,14 @@ _SRC = Path(__file__).resolve().parent
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from llm_client import structured_completion
+from llm_client import structured_completion_with_selection
+from model_policy import (
+    ModelSelection,
+    count_estimated_questions_from_direction,
+    estimate_generation_workload,
+    resolve_model_selection,
+    run_roi_checkpoint,
+)
 from path_utils import ensure_parent_dir, require_file, resolve_repo_path
 from schemas import (
     GeneratedSubjectBatch,
@@ -103,12 +110,14 @@ def generate_chapter(
     direction: SubjectDirectionPlan,
     chapter_no: int,
     skill_excerpt: str,
+    selection: ModelSelection,
 ) -> list[QuestionRow]:
     user_prompt = chapter_prompt(
         job=job, direction=direction, chapter_no=chapter_no, skill_excerpt=skill_excerpt
     )
-    batch = structured_completion(
-        model=job.model,
+
+    batch = structured_completion_with_selection(
+        selection,
         system_prompt=SYSTEM_PROMPT,
         user_prompt=user_prompt,
         response_model=GeneratedSubjectBatch,
@@ -127,18 +136,50 @@ def run_generate(job_path: Path) -> Path:
             f"in {job.approved_direction_path}, then re-run."
         )
 
-    if direction.class_level != job.class_level or direction.subject != job.subject:
+    enforce = (
+        job.enforce_maths_case_format
+        if job.enforce_maths_case_format is not None
+        else direction.enforce_maths_case_format
+    )
+    job = job.model_copy(
+        update={
+            "class_level": job.class_level or direction.class_level,
+            "subject": job.subject or direction.subject,
+            "id_prefix": job.id_prefix or direction.id_prefix,
+            "enforce_maths_case_format": enforce,
+        }
+    )
+
+    if job.class_level != direction.class_level or job.subject != direction.subject:
         raise ValueError(
-            "Job class/subject does not match approved direction: "
+            "Resolved class/subject does not match approved direction: "
             f"job={job.class_level}/{job.subject} direction={direction.class_level}/{direction.subject}"
         )
 
     skill_excerpt = load_skill_excerpt(direction.skill_path)
+
+    # One ROI checkpoint for the full generation run (per-chapter calls reuse the same selection).
+    est_q = count_estimated_questions_from_direction(direction.chapters)
+    workload, large = estimate_generation_workload(
+        chapter_count=len(direction.chapters),
+        estimated_questions=est_q,
+    )
+    _generation_selection = resolve_model_selection(
+        "generation",
+        prefs=job.model_preferences,
+        estimated_workload=workload,
+        legacy_model=job.model,
+        large_workload=large,
+    )
+    generation_selection = run_roi_checkpoint(_generation_selection)
+
     all_rows: list[QuestionRow] = []
 
     for ch in sorted(direction.chapters, key=lambda c: c.chapter_no):
         print(f"Generating chapter {ch.chapter_no}: {ch.chapter_title}…")
-        rows = generate_chapter(job, direction, ch.chapter_no, skill_excerpt)
+        rows = generate_chapter(
+            job, direction, ch.chapter_no, skill_excerpt, generation_selection
+        )
         all_rows.extend(rows)
 
     all_rows = sort_questions(all_rows)

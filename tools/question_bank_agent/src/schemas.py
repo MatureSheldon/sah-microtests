@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from model_policy import ModelPreferences
+
 # Exact column order for the Questions sheet (must match SKILL.md / Apps Script).
 SAH_HEADERS: list[str] = [
     "Question ID",
@@ -130,6 +132,7 @@ class SubjectDirectionPlan(BaseModel):
     skill_path: str | None = None
     class_policy_path: str | None = None
     subject_policy_path: str | None = None
+    enforce_maths_case_format: bool = False
 
 
 class PlanChapterJob(BaseModel):
@@ -143,33 +146,64 @@ class PlanChapterJob(BaseModel):
 class PlanSubjectJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    mode: Literal["plan_subject"] = "plan_subject"
     job_type: Literal["plan"] = "plan"
     class_level: str
     subject: str
     subject_display: str | None = None
-    id_prefix: str
+    id_prefix: str | None = None
     skill_path: str
     class_policy_path: str
     subject_policy_path: str
     output_direction_json: str
     output_direction_md: str
     chapters: list[PlanChapterJob]
-    model: str = "gpt-4o"
+    model: str | None = None
+    model_preferences: ModelPreferences | None = None
     planning_notes: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_plan_job(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        mode = d.get("mode") or d.get("job_type")
+        if mode == "plan_subject":
+            d["mode"] = "plan_subject"
+            d["job_type"] = "plan"
+        if "class" in d and "class_level" not in d:
+            d["class_level"] = str(d.pop("class"))
+        return d
 
 
 class GenerateSubjectJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    mode: Literal["generate_subject_from_approved_plan"] = "generate_subject_from_approved_plan"
     job_type: Literal["generate"] = "generate"
-    class_level: str
-    subject: str
-    id_prefix: str
     approved_direction_path: str
     output_path: str
-    model: str = "gpt-4o"
-    # When true, Case/Source-Based rows must use (i)(ii)(iii) and marks 4 (Maths-style).
-    enforce_maths_case_format: bool = False
+    class_level: str | None = None
+    subject: str | None = None
+    id_prefix: str | None = None
+    model: str | None = None
+    model_preferences: ModelPreferences | None = None
+    enforce_maths_case_format: bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_generate_job(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        mode = d.get("mode") or d.get("job_type")
+        if mode == "generate_subject_from_approved_plan":
+            d["mode"] = "generate_subject_from_approved_plan"
+            d["job_type"] = "generate"
+        if "class" in d and "class_level" not in d:
+            d["class_level"] = str(d.pop("class"))
+        return d
 
 
 class QuestionRow(BaseModel):

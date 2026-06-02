@@ -12,8 +12,20 @@ _SRC = Path(__file__).resolve().parent
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from llm_client import structured_completion
+from llm_client import structured_completion_with_selection
+from model_policy import (
+    estimate_plan_workload,
+    resolve_model_selection,
+    run_roi_checkpoint,
+)
 from path_utils import ensure_parent_dir, require_file, resolve_repo_path
+from policy_loader import (
+    derive_id_prefix,
+    enforce_maths_case_format_from_policy,
+    id_prefix_from_policy,
+    subject_display_from_policy,
+    subject_key_from_policy,
+)
 from schemas import ChapterDirection, PlanSubjectJob, SubjectDirectionPlan
 
 SYSTEM_PROMPT = """You are the SAH NCERT question-bank planning agent for Scholars Academic Home.
@@ -132,8 +144,25 @@ def run_plan(job_path: Path) -> SubjectDirectionPlan:
     subject_policy = load_text(job.subject_policy_path, "Subject policy")
 
     user_prompt = build_user_prompt(job, skill, class_policy, subject_policy)
-    plan = structured_completion(
-        model=job.model,
+
+    total_chars = 0
+    for ch in job.chapters:
+        total_chars += len(load_text(ch.source_path, f"Chapter {ch.chapter_no} source"))
+    workload, large = estimate_plan_workload(
+        chapter_count=len(job.chapters),
+        total_source_chars=total_chars,
+    )
+    selection = resolve_model_selection(
+        "planning",
+        prefs=job.model_preferences,
+        estimated_workload=workload,
+        legacy_model=job.model,
+        large_workload=large,
+    )
+    selection = run_roi_checkpoint(selection)
+
+    plan = structured_completion_with_selection(
+        selection,
         system_prompt=SYSTEM_PROMPT,
         user_prompt=user_prompt,
         response_model=SubjectDirectionPlan,
@@ -155,17 +184,28 @@ def run_plan(job_path: Path) -> SubjectDirectionPlan:
             )
         )
 
+    subject_key = subject_key_from_policy(job.subject_policy_path)
+    subject_display = job.subject_display or job.subject or subject_display_from_policy(
+        job.subject_policy_path, job.subject
+    )
+    id_prefix = (
+        job.id_prefix
+        or id_prefix_from_policy(job.subject_policy_path, job.class_level)
+        or derive_id_prefix(job.class_level, subject_key)
+    )
+
     final = SubjectDirectionPlan(
         class_level=job.class_level,
-        subject=job.subject,
-        subject_display=job.subject_display or job.subject,
+        subject=subject_key,
+        subject_display=subject_display,
         approved_direction=False,
-        id_prefix=job.id_prefix,
+        id_prefix=id_prefix,
         chapters=chapters,
         planning_notes=plan.planning_notes or job.planning_notes,
         skill_path=job.skill_path,
         class_policy_path=job.class_policy_path,
         subject_policy_path=job.subject_policy_path,
+        enforce_maths_case_format=enforce_maths_case_format_from_policy(job.subject_policy_path),
     )
 
     json_out = ensure_parent_dir(job.output_direction_json)

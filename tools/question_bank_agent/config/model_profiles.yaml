@@ -1,0 +1,61 @@
+# Task-type ROI profiles (generic — not class/subject specific).
+# Used to recommend provider/model; actual choice requires user confirmation in interactive mode.
+
+task_types:
+  planning:
+    quality_sensitivity: medium
+    cost_sensitivity: high
+    reason: Direction planning is structured; a cheaper/faster model often suffices if sources are clear.
+    recommended:
+      openai: gpt-4o-mini
+      gemini: gemini-2.0-flash
+
+  generation:
+    quality_sensitivity: high
+    cost_sensitivity: medium
+    reason: Full question rows need accuracy, schema adherence, and pedagogy quality.
+    recommended:
+      openai: gpt-4o
+      gemini: gemini-2.0-pro
+
+  review:
+    quality_sensitivity: high
+    cost_sensitivity: low
+    reason: Review catches subtle errors; precision matters more than speed.
+    recommended:
+      openai: gpt-4o
+      gemini: gemini-2.0-pro
+
+  repair:
+    quality_sensitivity: high
+    cost_sensitivity: medium
+    reason: Targeted fixes must preserve schema and intent without introducing drift.
+    recommended:
+      openai: gpt-4o
+      gemini: gemini-2.0-pro
+
+  asset_generation:
+    quality_sensitivity: high
+    cost_sensitivity: medium
+    reason: Asset columns need reliable structured output (format, placement, data).
+    recommended:
+      openai: gpt-4o
+      gemini: gemini-2.0-pro
+
+  consolidation:
+    quality_sensitivity: medium
+    cost_sensitivity: medium
+    reason: Merging/sorting rows is mostly mechanical with occasional judgment calls.
+    recommended:
+      openai: gpt-4o-mini
+      gemini: gemini-2.0-flash
+
+defaults:
+  provider: openai
+  openai_model: gpt-4o
+  gemini_model: gemini-2.0-flash
+
+large_workload:
+  planning_chapter_threshold: 6
+  generation_chapter_threshold: 5
+  generation_question_threshold: 80

@@ -1,0 +1,52 @@
+{
+  "mode": "plan_subject",
+  "class": "9",
+  "subject": "Mathematics",
+  "skill_path": "skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md",
+  "class_policy_path": "policies/classes/class_9.yaml",
+  "subject_policy_path": "policies/subjects/mathematics.yaml",
+  "output_direction_json": "tools/question_bank_agent/outputs/plans/class9_maths_direction.json",
+  "output_direction_md": "tools/question_bank_agent/outputs/plans/class9_maths_direction.md",
+  "chapters": [
+    {
+      "chapter_no": 1,
+      "chapter_title": "Orienting Yourself: The Use of Coordinates",
+      "source_path": "sources/question_bank/class_9/mathematics/ch01.md"
+    },
+    {
+      "chapter_no": 2,
+      "chapter_title": "Introduction to Linear Polynomials",
+      "source_path": "sources/question_bank/class_9/mathematics/ch02.md"
+    },
+    {
+      "chapter_no": 3,
+      "chapter_title": "The World of Numbers",
+      "source_path": "sources/question_bank/class_9/mathematics/ch03.md"
+    },
+    {
+      "chapter_no": 4,
+      "chapter_title": "Exploring Algebraic Identities",
+      "source_path": "sources/question_bank/class_9/mathematics/ch04.md"
+    },
+    {
+      "chapter_no": 5,
+      "chapter_title": "I'm Up and Down, and Round and Round",
+      "source_path": "sources/question_bank/class_9/mathematics/ch05.md"
+    },
+    {
+      "chapter_no": 6,
+      "chapter_title": "Measuring Space: Perimeter and Area",
+      "source_path": "sources/question_bank/class_9/mathematics/ch06.md"
+    },
+    {
+      "chapter_no": 7,
+      "chapter_title": "The Mathematics of Maybe: Introduction to Probability",
+      "source_path": "sources/question_bank/class_9/mathematics/ch07.md"
+    },
+    {
+      "chapter_no": 8,
+      "chapter_title": "Predicting What Comes Next: Exploring Sequences and Progressions",
+      "source_path": "sources/question_bank/class_9/mathematics/ch08.md"
+    }
+  ]
+}

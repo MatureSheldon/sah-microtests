@@ -1,5 +1,6 @@
 openai
 openai-agents
+google-generativeai
 pydantic
 pyyaml
 openpyxl

@@ -36,3 +36,24 @@ After every **major build** or successful implementation step, stop and ask:
 Major builds include: agent scripts, policies, skills, GitHub Actions workflows, job JSON files, successful planning/generation runs, approved direction files, and major validation fixes.
 
 If approved, the user may run `./tools/dev/git_checkpoint.sh`.
+
+## Model ROI Checkpoint Rule
+
+Before any major LLM task, identify: task_type, current provider, current model, expected workload, quality sensitivity, cost sensitivity, and whether a cheaper/faster or stronger model may be better (see `tools/question_bank_agent/config/model_profiles.yaml`).
+
+If the task type changes or model ROI changes, stop and ask:
+
+> Model ROI checkpoint: This task may be better suited to a different model/provider. Current setting is [provider/model]. Do you want to continue, switch model, or switch provider?
+
+**Never** silently switch models or providers without explicit user approval.
+
+CLI entrypoints call `model_policy.run_roi_checkpoint` before planning/generation LLM calls. Respect `MODEL_CONFIRMATION_MODE` and job `model_preferences`.
+
+## .env-only API key rule
+
+Use repo-root `.env` as the single source of truth for LLM keys and model settings.
+
+- Do not use inherited shell/Cursor/system API keys.
+- Do not store keys in code, job JSON, policies, skills, commits, or prompts.
+- If `.env` is missing or required key is missing, fail with a clear error.
+- If inherited keys are detected, ignore them and warn.

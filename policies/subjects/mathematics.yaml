@@ -2,6 +2,7 @@
 
 subject: Maths
 display_name: Mathematics
+id_prefix: MATH
 
 pedagogy:
   priority: understanding_before_formula

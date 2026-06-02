@@ -1,0 +1,5 @@
+{
+  "mode": "generate_subject_from_approved_plan",
+  "approved_direction_path": "tools/question_bank_agent/approved_plans/class9_maths_direction.json",
+  "output_path": "tools/question_bank_agent/outputs/workbooks/SAH_Class_9_Maths_Question_Bank_MASTER.xlsx"
+}

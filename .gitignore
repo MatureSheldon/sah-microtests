@@ -1,6 +1,7 @@
 # Local configuration and credentials
 config.json
 .env
+!.env.example
 
 # Python / agent tooling
 .venv/
