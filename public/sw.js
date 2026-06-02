@@ -1,7 +1,7 @@
 // SAH Microtests — Service Worker
 // Strategy: cache-first for app shell, network-first for Sheets API
 
-const CACHE = "sah-v21";
+const CACHE = "sah-v22";
 
 const SHELL = [
   "./",
@@ -28,6 +28,7 @@ const SHELL = [
   "jszip.min.js",
   "manifest.json",
   "fallback-bank.json",
+  "data/subject-units.json",
   "icon-192.png",
   "icon-512.png",
   "logo.png"

@@ -199,11 +199,11 @@ function chaptersForCurrentDataset() {
   const map = new Map();
   for (const ch of state.bank.chapters || []) {
     if (ch.classLevel !== currentClassLevel() || !subjectsMatch(ch.subject, currentSubject())) continue;
-    map.set(ch.chapterNumber, { chapterNumber: ch.chapterNumber, chapterName: ch.chapterName });
+    map.set(ch.chapterNumber, { chapterNumber: ch.chapterNumber, chapterName: ch.chapterName, section: ch.section });
   }
   for (const q of questionsForCurrentDataset()) {
     if (!map.has(q.chapterNumber))
-      map.set(q.chapterNumber, { chapterNumber: q.chapterNumber, chapterName: q.chapterName });
+      map.set(q.chapterNumber, { chapterNumber: q.chapterNumber, chapterName: q.chapterName, section: q.section });
   }
   return [...map.values()].sort((a, b) => a.chapterNumber - b.chapterNumber);
 }
@@ -274,12 +274,53 @@ function renderChapterOptions(select, selected) {
   const placeholder = select.querySelector('option[value=""]');
   select.innerHTML = "";
   if (placeholder) select.appendChild(placeholder);
-  chapters.forEach((ch) => {
-    const opt = document.createElement("option");
-    opt.value = ch.chapterNumber;
-    opt.textContent = `${ch.chapterNumber}. ${ch.chapterName}`;
-    select.appendChild(opt);
-  });
+
+  const hasSections = chapters.some((ch) => ch.section);
+  if (hasSections) {
+    const groups = {};
+    const noGroup = [];
+    chapters.forEach((ch) => {
+      if (ch.section) {
+        if (!groups[ch.section]) groups[ch.section] = [];
+        groups[ch.section].push(ch);
+      } else {
+        noGroup.push(ch);
+      }
+    });
+
+    const sectionOrder = ["Reading Skills", "Grammar", "Creative Writing Skills"];
+    const allSections = unique([...sectionOrder, ...Object.keys(groups)]);
+
+    allSections.forEach((sec) => {
+      const list = groups[sec];
+      if (list && list.length > 0) {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = sec;
+        list.forEach((ch) => {
+          const opt = document.createElement("option");
+          opt.value = ch.chapterNumber;
+          opt.textContent = `${ch.chapterNumber}. ${ch.chapterName}`;
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      }
+    });
+
+    noGroup.forEach((ch) => {
+      const opt = document.createElement("option");
+      opt.value = ch.chapterNumber;
+      opt.textContent = `${ch.chapterNumber}. ${ch.chapterName}`;
+      select.appendChild(opt);
+    });
+  } else {
+    chapters.forEach((ch) => {
+      const opt = document.createElement("option");
+      opt.value = ch.chapterNumber;
+      opt.textContent = `${ch.chapterNumber}. ${ch.chapterName}`;
+      select.appendChild(opt);
+    });
+  }
+
   if (selected != null && chapters.some((c) => Number(c.chapterNumber) === Number(selected))) {
     select.value = String(selected);
   }
@@ -380,7 +421,10 @@ function scoreCandidate(q, selected, chapterTarget, diffTargets) {
 }
 
 function generatePaper() {
-  if (!hasCurrentDataset()) { alert("This dataset has no questions yet."); return; }
+  if (!hasCurrentDataset()) {
+    alert(`Warning: No questions exist in the question bank for Class ${currentClassLevel()} ${currentSubject()} yet.`);
+    return;
+  }
   if (!validateMix()) { alert("Please set at least one chapter weight and difficulty weight."); return; }
   
   const totalMarks = numberValue("totalMarks");
@@ -397,6 +441,11 @@ function generatePaper() {
   };
   
   const available = getAvailableQuestions();
+  if (available.length === 0) {
+    alert("Warning: No questions match the selected question types for this subject.");
+    return;
+  }
+
   const locked = state.selectedQuestions.filter((q) => state.lockedIds.has(q.id));
   const selected = [...locked];
   const used = new Set(selected.map((q) => q.id));
@@ -421,6 +470,11 @@ function generatePaper() {
     const mrks = selected.reduce((s, i) => s + i.marks, 0);
     if (mrks >= totalMarks) break;
     if (q.marks <= totalMarks - mrks) { selected.push(q); used.add(q.id); }
+  }
+
+  if (selected.length === 0) {
+    alert("Warning: Could not generate any questions matching the selected blueprint.");
+    return;
   }
 
   const typeOrder = ["MCQ", "Assertion-Reason", "Very Short Answer", "Short Answer", "Long Answer", "Case/Source-Based"];
@@ -854,8 +908,10 @@ function updateDatasetStatus() {
     : "No questions added yet for this class and subject.";
   els.datasetHint.classList.toggle("ready", available);
   els.datasetHint.classList.toggle("warn", !available);
-  els.addChapter.disabled = !available;
-  els.generate.disabled = !available;
+  
+  const chaptersAvailable = chapterCount > 0;
+  els.addChapter.disabled = !chaptersAvailable;
+  els.generate.disabled = !chaptersAvailable;
 }
 
 // ─────────── DOCX GENERATION ─────────────────────────────────────
@@ -1553,6 +1609,67 @@ async function fetchBankWithFallback() {
   throw new Error(msg);
 }
 
+async function loadAndMergeSubjectUnits() {
+  if (!state.bank) return;
+  try {
+    const res = await fetch("data/subject-units.json");
+    if (!res.ok) {
+      console.warn("Failed to load subject-units.json:", res.statusText);
+      return;
+    }
+    const data = await res.json();
+    if (!data || !Array.isArray(data.units)) return;
+
+    if (!Array.isArray(state.bank.chapters)) {
+      state.bank.chapters = [];
+    }
+
+    for (const unit of data.units) {
+      const exists = state.bank.chapters.some(
+        (ch) =>
+          ch.classLevel === unit.classLevel &&
+          subjectsMatch(ch.subject, unit.subject) &&
+          ch.chapterNumber === unit.chapterNumber
+      );
+      if (!exists) {
+        state.bank.chapters.push({
+          classLevel: unit.classLevel,
+          subject: unit.subject,
+          chapterNumber: unit.chapterNumber,
+          chapterName: unit.chapterName,
+          section: unit.section,
+          unitType: unit.unitType,
+          patterns: unit.patterns
+        });
+      }
+
+      // Ensure classLevel is in state.bank.product.classes
+      if (state.bank.product) {
+        if (!Array.isArray(state.bank.product.classes)) {
+          state.bank.product.classes = [];
+        }
+        if (!state.bank.product.classes.includes(unit.classLevel)) {
+          state.bank.product.classes.push(unit.classLevel);
+        }
+
+        // Ensure subject is in state.bank.product.subjectsByClass[classLevel]
+        if (!state.bank.product.subjectsByClass) {
+          state.bank.product.subjectsByClass = {};
+        }
+        if (!Array.isArray(state.bank.product.subjectsByClass[unit.classLevel])) {
+          state.bank.product.subjectsByClass[unit.classLevel] = [];
+        }
+        const subjects = state.bank.product.subjectsByClass[unit.classLevel];
+        if (!subjects.some((s) => subjectsMatch(s, unit.subject))) {
+          subjects.push(unit.subject);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Error merging subject units:", e);
+  }
+}
+
 async function loadQuestionBank(options = {}) {
   const prevClass = state.bank ? currentClassLevel() : null;
   const prevSubject = state.bank ? currentSubject() : null;
@@ -1564,6 +1681,7 @@ async function loadQuestionBank(options = {}) {
 
   try {
     state.bank = await fetchBankWithFallback();
+    await loadAndMergeSubjectUnits();
   } catch (e) {
     console.error("Failed to load any bank:", e);
     if (els.bankCount) els.bankCount.textContent = "Failed to load question bank";
