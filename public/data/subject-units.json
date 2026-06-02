@@ -1,0 +1,286 @@
+{
+    "defaultPatterns": {
+        "9|English": "R1"
+    },
+    "units": [
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Reading Skills",
+            "chapterNumber": 901,
+            "chapterName": "Unseen Discursive / Descriptive Passage",
+            "unitType": "reading_passage",
+            "patterns": [
+                "2026-27_R1"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Reading Skills",
+            "chapterNumber": 902,
+            "chapterName": "Unseen Case-Based Passage",
+            "unitType": "reading_passage",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Reading Skills",
+            "chapterNumber": 903,
+            "chapterName": "Unseen Factual / Literary Passage",
+            "unitType": "reading_passage",
+            "patterns": [
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 911,
+            "chapterName": "Tenses / Sequence of Tenses",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 912,
+            "chapterName": "Modal Auxiliaries",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 913,
+            "chapterName": "Reported Speech",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 914,
+            "chapterName": "Conditional Clause: Type 1",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 915,
+            "chapterName": "Subject-Verb Concord",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 916,
+            "chapterName": "Determiners",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 917,
+            "chapterName": "Clauses: Noun Clause and Relative Clause",
+            "unitType": "grammar_topic",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 918,
+            "chapterName": "Editing / Omission",
+            "unitType": "grammar_format",
+            "patterns": [
+                "2026-27_R1"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 919,
+            "chapterName": "Paragraph Completion",
+            "unitType": "grammar_format",
+            "patterns": [
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 920,
+            "chapterName": "Sentence Rearrangement",
+            "unitType": "grammar_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Grammar",
+            "chapterNumber": 921,
+            "chapterName": "Sentence Transformation",
+            "unitType": "grammar_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 941,
+            "chapterName": "Notice Writing",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 942,
+            "chapterName": "Informal Invitation",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 943,
+            "chapterName": "Poster Creation",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 944,
+            "chapterName": "Letter to the Editor",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 945,
+            "chapterName": "Formal E-mail",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 946,
+            "chapterName": "Factual Description",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 947,
+            "chapterName": "Magazine Article",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 948,
+            "chapterName": "Speech Writing",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R2"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 949,
+            "chapterName": "Descriptive Essay",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1"
+            ]
+        },
+        {
+            "classLevel": "9",
+            "subject": "English",
+            "section": "Creative Writing Skills",
+            "chapterNumber": 950,
+            "chapterName": "Narrative Essay",
+            "unitType": "writing_format",
+            "patterns": [
+                "2026-27_R1",
+                "2026-27_R2"
+            ]
+        }
+    ]
+}
