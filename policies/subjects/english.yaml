@@ -1,0 +1,51 @@
+# Class 9 English Language and Literature — subject generation policy
+
+subject: English
+display_name: English
+id_prefix: ENG
+
+pedagogy:
+  priority: language_in_use_and_comprehension
+  contexts:
+    rules:
+      - reading_comprehension_passages_may_be_generated_as_unseen_passages
+      - grammar_questions_may_use_generated_contextual_sentences_based_on_cbse_syllabus_topics
+      - writing_tasks_may_use_generated_real_life_prompts_but_must_include_all_parameters
+      - internet_or_cbse_research_may_inform_paper_pattern_only
+    avoid:
+      - fake_quotations_or_invented_literature_content
+      - unsupported_interpretations_of_texts
+      - abstract_isolated_grammar_drills
+  explanations:
+    style: model_response_and_marking_rubric
+    show: detailed_rubric_or_step_by_step_grading_standards
+
+question_design:
+  extract_based:
+    rule: must_include_the_extract_in_the_question_stem
+  vocabulary:
+    rule: must_test_meaning_in_context
+  grammar:
+    syllabus_topics:
+      - Tenses
+      - Modals
+      - Subject-Verb Concord
+      - Reported Speech (Commands and requests, Statements, Questions)
+      - Determiners
+  writing:
+    requirements:
+      - Audience (who is the reader?)
+      - Purpose (why are we writing?)
+      - Format (formal letter, diary entry, story, descriptive paragraph)
+      - Word Limit (appropriate to marks)
+      - Rubric (marks allocation for Format, Content, Expression/Accuracy)
+
+literature:
+  rule: grounded_in_source_data
+  requirement: actual_literature_questions_must_be_grounded_in_uploaded_or_source_md_files_only
+  avoid: no_invented_literature_content_or_random_internet_based_chapter_content
+
+case_source_based:
+  applies_when: "Question Type = Case/Source-Based"
+  rule: self_contained_reading_passage
+  requirement: include_unseen_passage_text_with_data_in_question_stem_or_asset_columns

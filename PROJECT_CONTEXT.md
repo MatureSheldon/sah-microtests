@@ -1,39 +1,71 @@
 # SAH Microtests Project Context
 
-> **Agents:** For question-bank generation tooling, read [AGENTS.md](AGENTS.md) and [skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md](skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md) first.
+> Agents: for question-bank generation work, read [AGENTS.md](AGENTS.md) and [skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md](skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md) first.
 
-SAH Microtests is a local dashboard for Scholars Academic Home, Haldwani, to generate weekly microtests from a structured question bank. The product is being built first for Class 9 Science, but the dashboard is designed for multiple classes and subjects.
+SAH Microtests is a browser-based microtest builder and question-bank workflow for Scholars Academic Home, Haldwani.
 
-## What The System Does
+The product started as a Class 9 Science microtest dashboard, but it has evolved into two connected systems:
 
-- Reads a question bank from Google Sheets.
-- Lets a teacher choose class, subject, chapters, chapter-wise percentages, difficulty mix, total marks, and duration.
-- Generates a preview microtest.
-- Allows teachers to swap, lock, or remove questions before export.
-- Exports a Word `.docx` file containing the student paper and an answer-key section.
-- Records generated papers and updates question usage fields so repeated questions can be avoided.
+1. A teacher-facing PWA-style microtest builder in `public/`.
+2. An internal AI-assisted question-bank generation pipeline in `tools/question_bank_agent/`.
 
-## Current Data Source
+## Current Active Folder
 
-The source of truth is Google Sheets, exposed through a Google Apps Script web app.
-
-The local server reads from the configured Apps Script URL in:
+Use this repository location:
 
 ```text
-config.json
+/Users/adityabhatt/Documents/sah-microtests
 ```
 
-If Google Sheets is unavailable, the server falls back to:
+The older copy under `Documents/School Projects/sah-microtests` is stale and should not be treated as the active workspace.
+
+## What The Teacher App Does
+
+- Reads approved question-bank rows from Google Sheets through Apps Script.
+- Lets teachers choose class, subject, chapters, chapter-wise percentages, difficulty mix, marks, and duration.
+- Shows a live paper preview.
+- Allows swap, lock, remove, and flag-question workflows.
+- Exports a Word `.docx` paper from the browser.
+- Supports math rendering through KaTeX.
+- Supports image/asset fields for visual questions.
+- Uses service-worker/offline fallback assets for a PWA-style experience.
+
+## Active Frontend Files
 
 ```text
-data/class-9-science.json
+public/index.html
+public/app-v2.js
+public/styles-v2.css
+public/sw.js
+public/fallback-bank.json
+public/data/subject-units.json
 ```
 
-The dashboard shows the active data source as either `Google Sheets` or `local fallback file`.
+The old references to `public/app.js` and `public/styles.css` are no longer the current app path.
 
-## Required Google Sheet Structure
+## Google Sheets Model
 
-The question bank must have a `Questions` tab with these headers:
+The current Apps Script expects one tab per subject, such as:
+
+```text
+Science
+Maths
+English
+Hindi
+Social Science
+```
+
+Each subject tab contains question rows using the SAH schema. `Use in Papers = Yes` is the live-bank gate.
+
+The app also uses:
+
+- `Generated Papers` for export logs.
+- `Chapters` when available.
+- `public/data/subject-units.json` for bundled subject/unit metadata.
+
+## Required Question Columns
+
+Final question-bank workbooks and Google Sheet subject tabs should use this schema:
 
 ```text
 Question ID
@@ -67,16 +99,17 @@ Last Asked Date
 Last Paper ID
 Last Updated
 Notes
+Image URL
+Asset Format
+Asset Data
+Asset Placement
+Asset Width
+Asset Height
 ```
 
-Optional but recommended tabs:
+## Question Taxonomy
 
-- `Chapters`: class, subject, chapter number, chapter name, and planning fields.
-- `Generated Papers`: created automatically if missing, used for paper logs.
-
-## Question Type Design
-
-`Question Type` should use board-style buckets:
+Question Type:
 
 - `MCQ`
 - `Assertion-Reason`
@@ -85,7 +118,7 @@ Optional but recommended tabs:
 - `Long Answer`
 - `Case/Source-Based`
 
-`Question Style` adds the deeper pattern:
+Question Style:
 
 - `Direct Recall`
 - `Conceptual`
@@ -98,62 +131,48 @@ Optional but recommended tabs:
 - `Experiment/Activity-Based`
 - `Visual/Figure-Based`
 
-This keeps the system aligned with CBSE board-style training while still working for weekly microtests.
+## Question-Bank Agent System
 
-## Key Files
-
-```text
-server.js
-```
-
-Local Node server. Serves the dashboard, reads question data, exports Word files, logs generated papers, and writes usage updates.
+The question-bank automation is governed by:
 
 ```text
-public/index.html
-public/app.js
-public/styles.css
+AGENTS.md
+skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md
+policies/classes/
+policies/subjects/
+sources/question_bank/
+tools/question_bank_agent/
 ```
 
-Frontend dashboard. Handles class/subject selection, chapter mix, difficulty mix, question preview, swapping, locking, and export.
+The intended output is one validated Excel workbook per subject, with one main `Questions` sheet containing all chapters for that subject.
 
-```text
-google-apps-script/Code.gs
-```
-
-Google Apps Script code to paste into the Google Sheet’s Apps Script project. It exposes question-bank data and accepts generated-paper logs.
-
-```text
-config.json
-```
-
-Local private config containing the deployed Apps Script web app URL.
-
-```text
-README.md
-```
-
-Setup and connection instructions.
+After approval, rows are imported into the school's Google Sheet subject tabs.
 
 ## Running Locally
 
-From the project directory:
+Start the local host:
 
 ```sh
 npm start
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:3029
 ```
 
+Build CSS:
+
+```sh
+npm run build:css
+```
+
 ## Important Current State
 
-- Class and subject selectors are product-level, not hardcoded only for Class 9 Science.
-- Class 9 Science is the first live dataset.
-- The dashboard refreshes the Google Sheet bank on focus, every 60 seconds, and through the `Refresh Bank` button.
-- New chapters appear automatically when they exist in question rows; with the updated Apps Script, they can also appear from the `Chapters` tab.
-- Demo exports do not update usage counts.
-- Real exports update `Times Asked`, `Last Asked Date`, and `Last Paper ID`.
+- The current branch is `feature/class9-english-units`.
+- The new repo is ahead of `question-bank-agent-system`.
+- English planning/source files are present locally and should be committed when approved.
+- `public/data/subject-units.json` is the canonical lowercase path. Avoid `public/Data` casing in future edits.
+- Root `/data/` and `/exports/` are local/deprecated output folders and are ignored.
 

@@ -17,7 +17,7 @@ node_modules/
 Thumbs.db
 
 # Output exports and local databases (from deprecated server)
-exports/
-data/
+/exports/
+/data/
 
 # Note: tools/question_bank_agent/approved_plans/ is intentionally NOT ignored.

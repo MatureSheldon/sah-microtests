@@ -1,0 +1,27 @@
+{
+  "mode": "plan_subject",
+  "class": "9",
+  "subject": "English",
+  "skill_path": "skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md",
+  "class_policy_path": "policies/classes/class_9.yaml",
+  "subject_policy_path": "policies/subjects/english.yaml",
+  "output_direction_json": "tools/question_bank_agent/outputs/plans/class9_english_direction.json",
+  "output_direction_md": "tools/question_bank_agent/outputs/plans/class9_english_direction.md",
+  "chapters": [
+    {
+      "chapter_no": 902,
+      "chapter_title": "Reading Skills — Unseen Case-Based Passage",
+      "source_path": "sources/question_bank/class_9/english/ch902.md"
+    },
+    {
+      "chapter_no": 913,
+      "chapter_title": "Grammar — Reported Speech",
+      "source_path": "sources/question_bank/class_9/english/ch913.md"
+    },
+    {
+      "chapter_no": 944,
+      "chapter_title": "Creative Writing Skills — Letter to the Editor",
+      "source_path": "sources/question_bank/class_9/english/ch944.md"
+    }
+  ]
+}
