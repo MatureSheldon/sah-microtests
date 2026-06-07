@@ -36,6 +36,7 @@ Write complete question rows that match the SAH Excel schema exactly.
 Use KaTeX-safe plain text (e.g. x^2, fractions as a/b).
 Store any diagram/table only in same-row asset columns (Asset Format, Asset Data, etc.).
 Never reference external sheets. Use in Papers must be Yes for every row.
+For MCQ questions, you MUST populate Option A, Option B, Option C, Option D, and Correct Answer (which must be exactly A, B, C, or D) with non-empty values.
 For Case/Source-Based questions use exactly sub-parts (i), (ii), and (iii) in the stem — never (iv).
 When enforce_maths_case_format is true, Case/Source-Based marks must be 4 (1+1+2).
 Generate unique Question IDs using the given id_prefix pattern."""
@@ -101,6 +102,7 @@ SKILL excerpt:
 {skill_excerpt}
 
 Return one JSON object with a "questions" array. Each item must include all required SAH fields.
+For MCQ questions, you MUST populate Option A, Option B, Option C, Option D, and Correct Answer (A/B/C/D).
 Use empty strings for unused PYQ fields. Set Last Updated to today's date (YYYY-MM-DD).
 """
 
@@ -175,7 +177,11 @@ def run_generate(job_path: Path) -> Path:
 
     all_rows: list[QuestionRow] = []
 
-    for ch in sorted(direction.chapters, key=lambda c: c.chapter_no):
+    import time
+    for i, ch in enumerate(sorted(direction.chapters, key=lambda c: c.chapter_no)):
+        if i > 0:
+            print("Rate limit mitigation: sleeping for 15 seconds...")
+            time.sleep(15)
         print(f"Generating chapter {ch.chapter_no}: {ch.chapter_title}…")
         rows = generate_chapter(
             job, direction, ch.chapter_no, skill_excerpt, generation_selection

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -80,6 +80,59 @@ def _structured_openai(
     return response_model.model_validate(json.loads(raw))
 
 
+def dereference_schema(schema: dict) -> dict:
+    if not isinstance(schema, dict):
+        return schema
+    
+    defs = schema.get("$defs", {})
+    
+    STRIP_KEYS = (
+        "additionalProperties", "title", "default",
+        "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+        "minLength", "maxLength", "pattern", "minItems", "maxItems",
+        "uniqueItems", "multipleOf"
+    )
+    
+    def resolve(val: Any) -> Any:
+        if isinstance(val, dict):
+            if "anyOf" in val:
+                sub_types = val["anyOf"]
+                if isinstance(sub_types, list):
+                    non_null = [t for t in sub_types if isinstance(t, dict) and t.get("type") != "null"]
+                    if len(non_null) == 1:
+                        return resolve(non_null[0])
+                    elif len(non_null) > 1:
+                        return resolve(non_null[0])
+            
+            if "$ref" in val:
+                ref_path = val["$ref"]
+                if ref_path.startswith("#/$defs/"):
+                    def_name = ref_path.split("/")[-1]
+                    if def_name in defs:
+                        resolved = resolve(defs[def_name])
+                        merged = {k: v for k, v in val.items() if k not in ("$ref",) and k not in STRIP_KEYS}
+                        merged.update(resolved)
+                        val = merged
+            
+            cleaned = {}
+            for k, v in val.items():
+                if k in STRIP_KEYS:
+                    continue
+                if k == "const":
+                    cleaned["enum"] = [v]
+                else:
+                    cleaned[k] = resolve(v)
+            return cleaned
+        elif isinstance(val, list):
+            return [resolve(v) for v in val]
+        return val
+
+    new_schema = resolve(schema)
+    if "$defs" in new_schema:
+        del new_schema["$defs"]
+    return new_schema
+
+
 def _structured_gemini(
     *,
     model: str,
@@ -105,7 +158,7 @@ def _structured_gemini(
         model_name=model,
         system_instruction=system_prompt,
     )
-    schema = response_model.model_json_schema()
+    schema = dereference_schema(response_model.model_json_schema())
 
     try:
         response = gemini_model.generate_content(

@@ -1,0 +1,226 @@
+{
+  "job_type": "direction",
+  "class_level": "9",
+  "subject": "English",
+  "subject_display": "English",
+  "approved_direction": true,
+  "id_prefix": "ENG",
+  "chapters": [
+    {
+      "chapter_no": 902,
+      "chapter_title": "Reading Skills — Unseen Case-Based Passage",
+      "source_path": "sources/question_bank/class_9/english/ch902.md",
+      "core_concepts": [
+        "Unseen passage comprehension",
+        "Factual interpretation",
+        "Data analysis from visuals (charts, reports)",
+        "Inference and deduction",
+        "Vocabulary in context"
+      ],
+      "skills_to_test": [
+        "Reading comprehension",
+        "Critical thinking and analysis",
+        "Interpretation of visual data",
+        "Inferential understanding",
+        "Vocabulary application based on context"
+      ],
+      "good_contexts": [
+        "Student survey statistics (e.g., screen time, sports participation, reading habits)",
+        "Environmental facts and reports",
+        "Health and wellness statistics",
+        "Social trends and community issues"
+      ],
+      "misconceptions_to_address": [
+        "Misinterpreting statistical data or charts",
+        "Making inferences not directly supported by the text",
+        "Defining vocabulary out of the passage's specific context",
+        "Reliance on external general knowledge rather than passage content"
+      ],
+      "diagram_or_asset_needs": [
+        "Charts (bar, pie, line)",
+        "Graphs",
+        "Tables of statistical data",
+        "Infographics",
+        "Simple diagrams illustrating a concept from the passage"
+      ],
+      "avoid": [
+        "Ambiguous or contradictory data within the passage",
+        "Passages requiring external specialized knowledge",
+        "Questions with multiple equally correct interpretations",
+        "Topics that are overly sensitive or controversial for this age group",
+        "Passages outside the 300-350 word limit"
+      ],
+      "chapter_question_direction": "Dear students, hone your reading and analytical skills! You'll be presented with an unseen factual passage, often with visual data. Read carefully to understand the main ideas, interpret the information, and answer questions based on the text and visuals provided. Pay close attention to details and context.",
+      "sample_question_directions": [
+        {
+          "question_type": "MCQ",
+          "count": 3,
+          "direction": "Based on the passage, identify the most accurate statement regarding [specific data point/theme].",
+          "marks_each": 1
+        },
+        {
+          "question_type": "Very Short Answer",
+          "count": 2,
+          "direction": "From the passage, state one reason for [observed trend].",
+          "marks_each": 1
+        },
+        {
+          "question_type": "Short Answer",
+          "count": 2,
+          "direction": "Analyze the chart provided and explain how it supports/contradicts a point made in the passage about [topic].",
+          "marks_each": 2
+        },
+        {
+          "question_type": "Short Answer",
+          "count": 1,
+          "direction": "Infer from the passage why [character/group] might feel [emotion/have opinion] about [topic].",
+          "marks_each": 2
+        }
+      ],
+      "target_question_counts": {
+        "MCQ": 3,
+        "Very Short Answer": 2,
+        "Short Answer": 3
+      }
+    },
+    {
+      "chapter_no": 913,
+      "chapter_title": "Grammar — Reported Speech",
+      "source_path": "sources/question_bank/class_9/english/ch913.md",
+      "core_concepts": [
+        "Direct and indirect (reported) speech transformation",
+        "Tense shifts in reported speech (e.g., simple past to past perfect)",
+        "Changes in pronouns and possessives",
+        "Changes in time and place adverbs",
+        "Reporting verbs (said, told, asked, requested, ordered, etc.)",
+        "Converting commands/requests, statements, and questions into reported speech"
+      ],
+      "skills_to_test": [
+        "Grammatical accuracy in sentence transformation",
+        "Applying rules of reported speech in contextual sentences",
+        "Identifying and correcting errors in reported speech constructions"
+      ],
+      "good_contexts": [
+        "Dialogues between students, teachers, friends, or family",
+        "Reporting news, events, or conversations",
+        "Relaying messages or instructions",
+        "Formal and informal conversational scenarios"
+      ],
+      "misconceptions_to_address": [
+        "Incorrect tense shifts (e.g., not shifting tenses when needed)",
+        "Failure to change pronouns or time/place adverbs correctly",
+        "Confusing the correct reporting verb for different sentence types (e.g., 'said' vs. 'asked')",
+        "Incorrect punctuation when dealing with direct speech",
+        "Mixing up rules for statements, questions, and commands when reporting"
+      ],
+      "diagram_or_asset_needs": [
+        "Simple dialogue bubbles or character outlines to represent speakers in contextual questions (optional)"
+      ],
+      "avoid": [
+        "Isolated grammar drills without context",
+        "Overly complex or convoluted sentences",
+        "Ambiguous direct speech that can be interpreted in multiple ways",
+        "Slang or highly informal language that is difficult to report formally"
+      ],
+      "chapter_question_direction": "Hello young grammarians! This section will test your understanding of Reported Speech. You'll convert direct speech into indirect speech, and vice-versa, making sure to correctly change tenses, pronouns, and time expressions. Focus on accurate transformation in realistic scenarios.",
+      "sample_question_directions": [
+        {
+          "question_type": "MCQ",
+          "count": 3,
+          "direction": "Choose the correct reported speech for: '[Direct Speech Sentence]'.",
+          "marks_each": 1
+        },
+        {
+          "question_type": "Very Short Answer",
+          "count": 2,
+          "direction": "Convert the following direct speech into indirect speech: 'He said, 'Please close the door.''",
+          "marks_each": 1
+        },
+        {
+          "question_type": "Short Answer",
+          "count": 2,
+          "direction": "Complete the dialogue by reporting the given sentences correctly.",
+          "marks_each": 2
+        },
+        {
+          "question_type": "Short Answer",
+          "count": 1,
+          "direction": "Identify and correct the error in the reported speech sentence: '[Incorrect Reported Speech Sentence]'.",
+          "marks_each": 2
+        }
+      ],
+      "target_question_counts": {
+        "MCQ": 3,
+        "Very Short Answer": 2,
+        "Short Answer": 3
+      }
+    },
+    {
+      "chapter_no": 944,
+      "chapter_title": "Creative Writing Skills — Letter to the Editor",
+      "source_path": "sources/question_bank/class_9/english/ch944.md",
+      "core_concepts": [
+        "Formal letter format (sender/receiver addresses, date, subject, salutation, body, complimentary close)",
+        "Persuasive writing techniques",
+        "Clearly stating a social or civic issue",
+        "Suggesting viable solutions or recommendations",
+        "Maintaining a formal and respectful tone",
+        "Adhering to specified word limits",
+        "Understanding audience and purpose in formal communication"
+      ],
+      "skills_to_test": [
+        "Formal writing conventions",
+        "Expressing opinions clearly, concisely, and persuasively",
+        "Structuring arguments logically",
+        "Adhering to prescribed formats and word limits",
+        "Using appropriate vocabulary for formal communication"
+      ],
+      "good_contexts": [
+        "Addressing local civic issues (e.g., sanitation, road safety, traffic congestion)",
+        "Promoting social causes (e.g., literacy, health awareness, environmental protection)",
+        "Suggesting improvements to community services or public facilities",
+        "Expressing concerns about school-related issues (e.g., bullying, extracurricular activities)"
+      ],
+      "misconceptions_to_address": [
+        "Using informal language or slang",
+        "Incorrect or incomplete formal letter format",
+        "Exceeding the specified word limit",
+        "Vague or unclear subject lines",
+        "Rambling or repetitive content in the body paragraphs",
+        "Failure to include proper addresses, salutations, or complimentary closes"
+      ],
+      "diagram_or_asset_needs": [
+        "No specific diagrams; explanations may include a visual outline of letter format or model responses"
+      ],
+      "avoid": [
+        "Informal conversational language",
+        "Highly personal grievances or complaints",
+        "Topics requiring specialized or adult professional knowledge",
+        "Prompts that do not clearly define the target audience, purpose, format, or word limit"
+      ],
+      "chapter_question_direction": "Budding writers, get ready to express yourselves formally! This section challenges you to write a 'Letter to the Editor' on various social issues. Remember to follow the correct formal letter format, maintain a polite and persuasive tone, and clearly present your views and solutions within the given word limit. Your ability to communicate effectively in a formal setting is key!",
+      "sample_question_directions": [
+        {
+          "question_type": "Long Answer",
+          "count": 2,
+          "direction": "Write a letter to the Editor of a national daily, expressing your concern about the rising problem of plastic waste in your city and suggesting ways to tackle it.",
+          "marks_each": 5
+        },
+        {
+          "question_type": "Long Answer",
+          "count": 1,
+          "direction": "You are [Name], a resident of [Locality]. Write a letter to the Editor of a local newspaper highlighting the need for more public libraries in your area to encourage reading habits among children.",
+          "marks_each": 5
+        }
+      ],
+      "target_question_counts": {
+        "Long Answer": 3
+      }
+    }
+  ],
+  "planning_notes": "Generated subject direction plan for Class 9 English based on provided chapter sources and policies. All required fields populated per schema.",
+  "skill_path": "skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md",
+  "class_policy_path": "policies/classes/class_9.yaml",
+  "subject_policy_path": "policies/subjects/english.yaml",
+  "enforce_maths_case_format": false
+}
