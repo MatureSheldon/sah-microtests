@@ -12,6 +12,9 @@ tools/question_bank_agent/outputs/
 # Dependencies
 node_modules/
 
+# Generated deployment bundle
+/dist/
+
 # OS-specific files
 .DS_Store
 Thumbs.db
@@ -21,3 +24,16 @@ Thumbs.db
 /data/
 
 # Note: tools/question_bank_agent/approved_plans/ is intentionally NOT ignored.
+
+# Generated Vite preview/dev output
+/dev-dist/
+
+# Local generated question-bank artifacts
+/questions.json
+/*.xlsx
+
+# Scratch verification scripts
+/test-jsdom.js
+/test-playwright.py
+/test-puppeteer.js
+/json_to_excel.py

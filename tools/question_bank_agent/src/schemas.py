@@ -216,32 +216,32 @@ class QuestionRow(BaseModel):
     subject: str = Field(alias="Subject", min_length=1)
     chapter_no: int = Field(alias="Chapter No.", ge=1)
     chapter: str = Field(alias="Chapter", min_length=1)
-    topic: str = Field(alias="Topic", default="")
-    subtopic: str = Field(alias="Subtopic", default="")
+    topic: str = Field(alias="Topic")
+    subtopic: str = Field(alias="Subtopic")
     difficulty: str = Field(alias="Difficulty", min_length=1)
     question_type: str = Field(alias="Question Type", min_length=1)
-    question_style: str = Field(alias="Question Style", default="")
+    question_style: str = Field(alias="Question Style")
     marks: int = Field(alias="Marks", ge=1)
     question: str = Field(alias="Question", min_length=1)
-    option_a: str = Field(alias="Option A", default="")
-    option_b: str = Field(alias="Option B", default="")
-    option_c: str = Field(alias="Option C", default="")
-    option_d: str = Field(alias="Option D", default="")
-    correct_answer: str = Field(alias="Correct Answer", default="")
-    answer_solution: str = Field(alias="Answer / Solution", default="")
-    explanation: str = Field(alias="Explanation", default="")
-    learning_outcome: str = Field(alias="Learning Outcome", default="")
-    ncert_reference: str = Field(alias="NCERT Reference", default="")
-    source_type: str = Field(alias="Source Type", default="")
+    option_a: str = Field(alias="Option A")
+    option_b: str = Field(alias="Option B")
+    option_c: str = Field(alias="Option C")
+    option_d: str = Field(alias="Option D")
+    correct_answer: str = Field(alias="Correct Answer")
+    answer_solution: str = Field(alias="Answer / Solution")
+    explanation: str = Field(alias="Explanation")
+    learning_outcome: str = Field(alias="Learning Outcome")
+    ncert_reference: str = Field(alias="NCERT Reference")
+    source_type: str = Field(alias="Source Type")
     pyq_year: str = Field(alias="PYQ Year", default="")
     pyq_board_exam: str = Field(alias="PYQ Board/Exam", default="")
     pyq_paper_set: str = Field(alias="PYQ Paper/Set", default="")
-    use_in_papers: str = Field(alias="Use in Papers", default="Yes")
+    use_in_papers: str = Field(alias="Use in Papers")
     times_asked: int = Field(alias="Times Asked", default=0, ge=0)
     last_asked_date: str = Field(alias="Last Asked Date", default="")
     last_paper_id: str = Field(alias="Last Paper ID", default="")
-    last_updated: str = Field(alias="Last Updated", default="")
-    notes: str = Field(alias="Notes", default="")
+    last_updated: str = Field(alias="Last Updated")
+    notes: str = Field(alias="Notes")
     image_url: str = Field(alias="Image URL", default="")
     asset_format: str = Field(alias="Asset Format", default="")
     asset_data: str = Field(alias="Asset Data", default="")
@@ -252,9 +252,27 @@ class QuestionRow(BaseModel):
     @field_validator("question_type")
     @classmethod
     def question_type_must_be_known(cls, v: str) -> str:
-        if v not in QUESTION_TYPE_ORDER:
+        val = v.strip()
+        mapping = {
+            "vsa": "Very Short Answer",
+            "sa": "Short Answer",
+            "la": "Long Answer",
+            "mcq": "MCQ",
+            "ar": "Assertion-Reason",
+            "assertion-reason": "Assertion-Reason",
+            "case-based": "Case/Source-Based",
+            "source-based": "Case/Source-Based",
+            "case/source-based": "Case/Source-Based",
+            "very short answer": "Very Short Answer",
+            "short answer": "Short Answer",
+            "long answer": "Long Answer",
+        }
+        val_lower = val.lower()
+        if val_lower in mapping:
+            return mapping[val_lower]
+        if val not in QUESTION_TYPE_ORDER:
             raise ValueError(f"Unknown Question Type: {v!r}. Expected one of {QUESTION_TYPE_ORDER}")
-        return v
+        return val
 
     @field_validator("use_in_papers")
     @classmethod

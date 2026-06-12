@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from typing import Any, TypeVar
 
 from openai import OpenAI
@@ -179,7 +180,11 @@ def _structured_gemini(
     raw = getattr(response, "text", None) or ""
     if not raw:
         raise LLMError("Gemini returned an empty response", provider="gemini", model=model)
-    return response_model.model_validate(json.loads(raw))
+    try:
+        return response_model.model_validate(json.loads(raw))
+    except Exception as exc:
+        print(f"JSON parse/validation error. Raw response:\n{raw}\n", file=sys.stderr)
+        raise exc
 
 
 def structured_completion(

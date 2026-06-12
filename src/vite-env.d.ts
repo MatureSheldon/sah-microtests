@@ -1,0 +1,11 @@
+/// <reference types="vite/client" />
+declare module '*.css';
+
+interface ImportMetaEnv {
+  readonly VITE_GOOGLE_SHEETS_URL: string
+  readonly VITE_BANK_PASSCODE: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}

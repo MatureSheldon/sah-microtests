@@ -1,139 +1,39 @@
-# SAH Microtests
+# SAH Command Center
 
-SAH Microtests is a browser-based microtest builder for Scholars Academic Home, Haldwani.
+SAH Command Center is the teacher-facing app for Scholars Academic Home, Haldwani. It brings the daily teaching workflow into one React/Vite PWA: schedule, chapter library, lesson planning, concept resources, homework, and microtest generation.
 
-It reads approved question-bank rows from Google Sheets, lets teachers generate chapter-wise microtests, preview and swap questions, and export a Word `.docx` paper with an answer-key section.
+The product app lives in `src/`. The `public/` folder is only for static assets, templates, and fallback data copied by Vite. Do not build new UI in `public/`.
 
-## Current App
+## Current Product Model
 
-The active frontend is the v2/PWA app:
+Teachers start from Mission Control (`/`). The active period card launches contextual tools:
 
-```text
-public/index.html
-public/app-v2.js
-public/styles-v2.css
-public/sw.js
-```
+- `Plan` opens lesson-plan material.
+- `Concept` opens concept-map material.
+- `Homework` opens the homework workflow.
+- `Test` opens `/microtests` with class, subject, and chapter context.
 
-The app can run through the local static server:
+These tools are feature routes, not sidebar items. The sidebar is for broad navigation such as Today, Roadmap, Chapter Library, Timetable, and Admin.
 
-```sh
-npm start
-```
+## Data
 
-Then open:
+The microtest feature reads the question bank through `src/lib/bank.ts`:
 
-```text
-http://localhost:3029
-```
+- Primary: Google Apps Script URL from `VITE_GOOGLE_SHEETS_URL`.
+- Optional passcode: `VITE_BANK_PASSCODE`.
+- Fallback: `public/fallback-bank.json` for offline/demo use.
 
-## Google Sheets Connection
+Keep secrets in `.env`; `.env` is ignored. Use `.env.example` for safe placeholders.
 
-The current app stores the deployed Apps Script URL and optional passcode in the browser settings modal, not in the old `config.json` flow.
-
-In the dashboard:
-
-1. Click the settings icon.
-2. Paste the deployed Apps Script web app URL.
-3. Enter the passcode if one is configured in Apps Script properties.
-4. Save and reconnect.
-
-The legacy `server.js` still exists for local hosting and older API fallback behavior, but the v2 app does most paper generation and Word export in the browser.
-
-## Google Sheet Layout
-
-The Apps Script connector now reads subject-wise tabs. For example:
-
-```text
-Science
-Maths
-English
-Hindi
-Social Science
-```
-
-Each subject tab uses the SAH question-bank headers. The major columns are:
-
-```text
-Question ID
-Class
-Subject
-Chapter No.
-Chapter
-Topic
-Subtopic
-Difficulty
-Question Type
-Question Style
-Marks
-Question
-Option A
-Option B
-Option C
-Option D
-Correct Answer
-Answer / Solution
-Explanation
-Learning Outcome
-NCERT Reference
-Source Type
-PYQ Year
-PYQ Board/Exam
-PYQ Paper/Set
-Use in Papers
-Times Asked
-Last Asked Date
-Last Paper ID
-Last Updated
-Notes
-Image URL
-Asset Format
-Asset Data
-Asset Placement
-Asset Width
-Asset Height
-```
-
-Optional supporting tabs:
-
-- `Chapters`
-- `Generated Papers`
-
-## Question-Bank Automation
-
-Question-bank planning, generation, validation, and workbook writing live under:
-
-```text
-tools/question_bank_agent/
-skills/SAH_NCERT_Question_Bank_Generator_SKILL/
-policies/
-sources/
-```
-
-Before working on question-bank generation, read:
-
-```text
-AGENTS.md
-skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md
-```
-
-## Useful Commands
-
-Start local app:
+## Commands
 
 ```sh
-npm start
+npm start      # run the Vite app at http://127.0.0.1:5173
+npm run dev    # same dev server
+npm run build  # production build into dist/
+npm run preview
 ```
 
-Build Tailwind CSS:
+## Architecture Notes
 
-```sh
-npm run build:css
-```
-
-Check frontend syntax:
-
-```sh
-node --check public/app-v2.js
-```
-
+Read `APP_ARCHITECTURE.md` for the product architecture and `PROJECT_CONTEXT.md` for AI-agent handoff context.

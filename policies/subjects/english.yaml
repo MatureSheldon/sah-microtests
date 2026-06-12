@@ -49,3 +49,17 @@ case_source_based:
   applies_when: "Question Type = Case/Source-Based"
   rule: self_contained_reading_passage
   requirement: include_unseen_passage_text_with_data_in_question_stem_or_asset_columns
+  linked_sets:
+    rule: comprehension_and_extract_based_questions_must_be_grouped_into_linked_passage_sets
+    set_id_format: "{SUBJABBREV}{CLASS}-CH{NN}-SET{SEQ}"  # e.g., ENG9-CH902-SET001
+    set_size_range: "4-8 linked questions per set"
+    notes_metadata_format: |
+      Set ID: <set_id>
+      Stimulus type: <stimulus_type>
+      Display rule: show passage once before linked questions in paper generation.
+    policy:
+      - "Do not generate only one passage for a whole reading unit unless the approved direction explicitly asks for one passage set."
+      - "For a full English bank, create multiple passage sets across themes, difficulty levels, and question types."
+      - "Avoid using the same unseen passage across too many rows unless they are intentionally part of the same set."
+      - "A passage set should mix literal, inferential, vocabulary-in-context, evidence-based, and short-answer questions."
+

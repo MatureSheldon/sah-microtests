@@ -28,7 +28,11 @@ from schemas import (
     SubjectDirectionPlan,
     sort_questions,
 )
-from validator import validate_question_rows
+from validator import (
+    extract_passage_and_sub_question,
+    get_set_id_from_notes,
+    validate_question_rows,
+)
 from xlsx_writer import write_subject_workbook
 
 SYSTEM_PROMPT = """You are the SAH NCERT question-bank generation agent for Scholars Academic Home.
@@ -39,6 +43,20 @@ Never reference external sheets. Use in Papers must be Yes for every row.
 For MCQ questions, you MUST populate Option A, Option B, Option C, Option D, and Correct Answer (which must be exactly A, B, C, or D) with non-empty values.
 For Case/Source-Based questions use exactly sub-parts (i), (ii), and (iii) in the stem — never (iv).
 When enforce_maths_case_format is true, Case/Source-Based marks must be 4 (1+1+2).
+For English reading comprehension and extract-based questions:
+- Group them into linked passage/extract sets.
+- Each set must share the exact same passage text.
+- Assign a stable, unique Set ID (e.g., ENG9-CH902-SET001) for all questions in that set.
+- A set must contain 4 to 8 questions (a mix of MCQ, Very Short Answer, and Short Answer questions as per chapter requirements).
+- In the 'Notes' column, you MUST populate this exact metadata structure:
+  Set ID: <set_id>
+  Stimulus type: <stimulus_type> (e.g., Unseen Passage, Factual Passage, Literature Extract)
+  Display rule: show passage once before linked questions in paper generation.
+- The first question in the set must start with "Passage: <passage_text>" or "Extract: <extract_text>" followed by two newlines and the actual sub-question prompt.
+- For all other questions in the same set, start the Question column with "Passage: [Same as Set]\n\n<question_prompt>" or "Extract: [Same as Set]\n\n<question_prompt>".
+- Do not treat repeated passages as duplicate stems if they are part of the same Set ID.
+- But still reject duplicate actual question prompts within the same set.
+- Do not repeat the exact same sub-question prompt within the same set.
 Generate unique Question IDs using the given id_prefix pattern."""
 
 
@@ -101,7 +119,9 @@ Asset needs: {", ".join(ch.diagram_or_asset_needs)}
 SKILL excerpt:
 {skill_excerpt}
 
-Return one JSON object with a "questions" array. Each item must include all required SAH fields.
+Return one JSON object with a "questions" array containing the generated questions.
+You MUST generate exactly the number of questions specified in "Target counts" (e.g. if MCQ: 3, Short Answer: 3, and Very Short Answer: 2 are requested, you must generate exactly 8 question objects in the "questions" array). Do not omit any questions.
+For each question, fill in all required fields.
 For MCQ questions, you MUST populate Option A, Option B, Option C, Option D, and Correct Answer (A/B/C/D).
 Use empty strings for unused PYQ fields. Set Last Updated to today's date (YYYY-MM-DD).
 """
@@ -188,6 +208,24 @@ def run_generate(job_path: Path) -> Path:
         )
         all_rows.extend(rows)
 
+    # Propagate passage/extract text for linked English sets
+    set_passages: dict[str, str] = {}
+    for row in all_rows:
+        if row.subject.strip().lower() == "english":
+            set_id = get_set_id_from_notes(row.notes)
+            if set_id:
+                passage, _ = extract_passage_and_sub_question(row.question)
+                if passage and "[same as set]" not in passage.lower():
+                    set_passages[set_id] = passage
+
+    for row in all_rows:
+        if row.subject.strip().lower() == "english":
+            set_id = get_set_id_from_notes(row.notes)
+            if set_id and set_id in set_passages:
+                passage, sub_q = extract_passage_and_sub_question(row.question)
+                if not passage or "[same as set]" in passage.lower():
+                    row.question = f"{set_passages[set_id]}\n\n{sub_q}"
+
     all_rows = sort_questions(all_rows)
     errors = validate_question_rows(
         all_rows,
@@ -195,6 +233,9 @@ def run_generate(job_path: Path) -> Path:
         enforce_maths_case_format=job.enforce_maths_case_format,
     )
     if errors:
+        print("DEBUG: generated rows details:")
+        for r in all_rows:
+            print(f"ID: {r.question_id}, Type: {r.question_type}, Correct Answer: {r.correct_answer!r}, Options: A={r.option_a!r}, B={r.option_b!r}, C={r.option_c!r}, D={r.option_d!r}")
         raise ValueError("Validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
 
     out_path = ensure_parent_dir(job.output_path)

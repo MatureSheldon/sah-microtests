@@ -1,15 +1,10 @@
-# SAH Microtests Project Context
+# SAH Command Center Project Context
 
-> Agents: for question-bank generation work, read [AGENTS.md](AGENTS.md) and [skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md](skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md) first.
+> Agents: for question-bank generation work, read `AGENTS.md` and `skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md` first.
 
-SAH Microtests is a browser-based microtest builder and question-bank workflow for Scholars Academic Home, Haldwani.
+SAH Command Center is the single teacher-facing app for Scholars Academic Home, Haldwani. It is a React/Vite PWA that combines Mission Control, timetable awareness, chapter resources, lesson planning, homework, concept resources, and microtest generation.
 
-The product started as a Class 9 Science microtest dashboard, but it has evolved into two connected systems:
-
-1. A teacher-facing PWA-style microtest builder in `public/`.
-2. An internal AI-assisted question-bank generation pipeline in `tools/question_bank_agent/`.
-
-## Current Active Folder
+## Active Repository
 
 Use this repository location:
 
@@ -17,55 +12,61 @@ Use this repository location:
 /Users/adityabhatt/Documents/sah-microtests
 ```
 
-The older copy under `Documents/School Projects/sah-microtests` is stale and should not be treated as the active workspace.
+The older copy under `Documents/School Projects/sah-microtests` is stale and should not be used for product work.
 
-## What The Teacher App Does
+## Product Model
 
-- Reads approved question-bank rows from Google Sheets through Apps Script.
-- Lets teachers choose class, subject, chapters, chapter-wise percentages, difficulty mix, marks, and duration.
-- Shows a live paper preview.
-- Allows swap, lock, remove, and flag-question workflows.
-- Exports a Word `.docx` paper from the browser.
-- Supports math rendering through KaTeX.
-- Supports image/asset fields for visual questions.
-- Uses service-worker/offline fallback assets for a PWA-style experience.
+The app is not separate dashboards. The teacher starts from Mission Control (`/`) and launches context-specific tools from the active period card:
 
-## Active Frontend Files
+- Plan
+- Concept
+- Homework
+- Test / Microtest
+
+These tools are React feature routes. They should not be duplicated as a standalone app in `public/`.
+
+## Active Frontend
+
+Human-editable product source lives in:
 
 ```text
-public/index.html
-public/app-v2.js
-public/styles-v2.css
-public/sw.js
+src/
+index.html
+vite.config.ts
+package.json
+```
+
+`public/` is only for static assets and fallback data:
+
+```text
 public/fallback-bank.json
 public/data/subject-units.json
+public/templates/
+public/icon-192.png
+public/icon-512.png
+public/logo.png
 ```
 
-The old references to `public/app.js` and `public/styles.css` are no longer the current app path.
+Do not reintroduce `public/app-v2.js`, standalone builders, or old local-server UI paths.
 
-## Google Sheets Model
+## Question Bank Data
 
-The current Apps Script expects one tab per subject, such as:
+The microtest feature uses `src/lib/bank.ts`.
+
+Primary live source:
 
 ```text
-Science
-Maths
-English
-Hindi
-Social Science
+VITE_GOOGLE_SHEETS_URL
+VITE_BANK_PASSCODE
 ```
 
-Each subject tab contains question rows using the SAH schema. `Use in Papers = Yes` is the live-bank gate.
+Fallback source:
 
-The app also uses:
+```text
+public/fallback-bank.json
+```
 
-- `Generated Papers` for export logs.
-- `Chapters` when available.
-- `public/data/subject-units.json` for bundled subject/unit metadata.
-
-## Required Question Columns
-
-Final question-bank workbooks and Google Sheet subject tabs should use this schema:
+The Google Sheet subject tabs should use the SAH question-bank schema:
 
 ```text
 Question ID
@@ -107,72 +108,30 @@ Asset Width
 Asset Height
 ```
 
-## Question Taxonomy
+## Question-Bank Agent
 
-Question Type:
-
-- `MCQ`
-- `Assertion-Reason`
-- `Very Short Answer`
-- `Short Answer`
-- `Long Answer`
-- `Case/Source-Based`
-
-Question Style:
-
-- `Direct Recall`
-- `Conceptual`
-- `Application`
-- `Reasoning`
-- `Competency-Based`
-- `Numerical`
-- `Diagram-Based`
-- `Data/Table-Based`
-- `Experiment/Activity-Based`
-- `Visual/Figure-Based`
-
-## Question-Bank Agent System
-
-The question-bank automation is governed by:
+Question-bank planning, generation, validation, and workbook writing live under:
 
 ```text
-AGENTS.md
-skills/SAH_NCERT_Question_Bank_Generator_SKILL/SKILL.md
-policies/classes/
-policies/subjects/
-sources/question_bank/
 tools/question_bank_agent/
+skills/SAH_NCERT_Question_Bank_Generator_SKILL/
+policies/
+sources/
 ```
 
-The intended output is one validated Excel workbook per subject, with one main `Questions` sheet containing all chapters for that subject.
+The agent creates and validates offline question-bank workbooks. The React app consumes approved bank data from Google Sheets or fallback JSON.
 
-After approval, rows are imported into the school's Google Sheet subject tabs.
-
-## Running Locally
-
-Start the local host:
+## Commands
 
 ```sh
 npm start
+npm run dev
+npm run build
+npm run preview
 ```
 
-Open:
+`dist/` is generated and ignored.
 
-```text
-http://localhost:3029
-```
+## Current Architecture Rule
 
-Build CSS:
-
-```sh
-npm run build:css
-```
-
-## Important Current State
-
-- The current branch is `feature/class9-english-units`.
-- The new repo is ahead of `question-bank-agent-system`.
-- English planning/source files are present locally and should be committed when approved.
-- `public/data/subject-units.json` is the canonical lowercase path. Avoid `public/Data` casing in future edits.
-- Root `/data/` and `/exports/` are local/deprecated output folders and are ignored.
-
+There is one app: the React/Vite SAH Command Center. Microtests, homework, plans, and concept maps are features inside that app, launched from Today/Chapter context buttons.

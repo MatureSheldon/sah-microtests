@@ -1,5 +1,6 @@
 {
   "mode": "generate_subject_from_approved_plan",
   "approved_direction_path": "tools/question_bank_agent/approved_plans/class9_english_direction.json",
-  "output_path": "tools/question_bank_agent/outputs/workbooks/SAH_Class_9_English_Question_Bank_MASTER.xlsx"
+  "output_path": "tools/question_bank_agent/outputs/workbooks/SAH_Class_9_English_Question_Bank_MASTER.xlsx",
+  "model": "gemini-flash-lite-latest"
 }

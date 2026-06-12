@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from collections import Counter, defaultdict
 
 from schemas import (
@@ -25,6 +26,39 @@ def normalize_stem(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
+def get_set_id_from_notes(notes: str) -> str:
+    if not notes:
+        return ""
+    match = re.search(r"Set\s*ID\s*:\s*([^\s\n\r]+)", notes, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
+def extract_passage_and_sub_question(question_text: str) -> tuple[str, str]:
+    text = question_text.strip()
+    lower_text = text.lower()
+    is_passage_or_extract = (
+        lower_text.startswith("passage:") or 
+        lower_text.startswith("extract:") or
+        lower_text.startswith("read the extract") or
+        lower_text.startswith("read the passage") or
+        lower_text.startswith("passage ") or
+        lower_text.startswith("extract ")
+    )
+    if is_passage_or_extract:
+        parts = text.split("\n\n")
+        if len(parts) >= 2:
+            passage = parts[0].strip()
+            sub_q = "\n\n".join(parts[1:]).strip()
+            return passage, sub_q
+    return "", text
+
+
+def normalize_passage(passage: str) -> str:
+    return re.sub(r"\s+", " ", passage.strip().lower())
+
+
 def validate_question_rows(
     rows: list[QuestionRow],
     *,
@@ -38,6 +72,8 @@ def validate_question_rows(
 
     seen_ids: set[str] = set()
     seen_stems: dict[str, str] = {}
+    seen_sub_questions_by_set: dict[str, set[str]] = defaultdict(set)
+    set_id_to_passages: dict[str, list[tuple[str, str]]] = defaultdict(list)
     by_chapter: dict[int, list[QuestionRow]] = defaultdict(list)
 
     for row in rows:
@@ -47,14 +83,27 @@ def validate_question_rows(
             errors.append(f"Duplicate Question ID: {row.question_id!r}")
         seen_ids.add(row.question_id)
 
-        stem_key = normalize_stem(row.question)
-        if stem_key in seen_stems:
-            errors.append(
-                f"Duplicate question stem for {row.question_id!r} "
-                f"(same as {seen_stems[stem_key]!r})"
-            )
+        notes_str = row.notes or ""
+        set_id = get_set_id_from_notes(notes_str)
+        passage, sub_q = extract_passage_and_sub_question(row.question)
+
+        if set_id:
+            set_id_to_passages[set_id].append((row.question_id, passage or row.question))
+            sub_q_key = normalize_stem(sub_q)
+            if sub_q_key in seen_sub_questions_by_set[set_id]:
+                errors.append(
+                    f"Duplicate question prompt {row.question_id!r} within the same Set {set_id!r}"
+                )
+            seen_sub_questions_by_set[set_id].add(sub_q_key)
         else:
-            seen_stems[stem_key] = row.question_id
+            stem_key = normalize_stem(row.question)
+            if stem_key in seen_stems:
+                errors.append(
+                    f"Duplicate question stem for {row.question_id!r} "
+                    f"(same as {seen_stems[stem_key]!r})"
+                )
+            else:
+                seen_stems[stem_key] = row.question_id
 
         if row.use_in_papers not in ALLOWED_USE_IN_PAPERS:
             errors.append(f"{row.question_id}: invalid Use in Papers {row.use_in_papers!r}")
@@ -101,6 +150,41 @@ def validate_question_rows(
                 errors.append(
                     f"{row.question_id}: Case/Source-Based marks must be {MATHS_CASE_MARKS} "
                     f"(1+1+2), got {row.marks}"
+                )
+
+    # Check consistency of passage/extract for the same Set ID (warning, not hard failure)
+    for set_id, items in set_id_to_passages.items():
+        if len(items) > 1:
+            first_row_id, first_passage = items[0]
+            first_norm = normalize_passage(first_passage)
+            for row_id, passage in items[1:]:
+                if normalize_passage(passage) != first_norm:
+                    print(
+                        f"WARNING: Consistency error for Set {set_id!r}: passage text in {row_id!r} "
+                        f"does not match passage text in {first_row_id!r}",
+                        file=sys.stderr
+                    )
+
+    # Warning check: group English rows by their passage/extract text prefix
+    passage_groups: dict[str, list[QuestionRow]] = defaultdict(list)
+    for row in rows:
+        if row.subject.strip().lower() == "english":
+            passage, _ = extract_passage_and_sub_question(row.question)
+            if passage:
+                key = normalize_passage(passage)
+                passage_groups[key].append(row)
+
+    for key, group_rows in passage_groups.items():
+        if len(group_rows) > 6:
+            no_set_id_rows = []
+            for r in group_rows:
+                if not get_set_id_from_notes(r.notes):
+                    no_set_id_rows.append(r.question_id)
+            if len(no_set_id_rows) > 6:
+                print(
+                    f"WARNING: More than 6 reading comprehension/extract rows share the same passage "
+                    f"but do not have a Set ID in Notes: {', '.join(no_set_id_rows)}",
+                    file=sys.stderr
                 )
 
     if direction:

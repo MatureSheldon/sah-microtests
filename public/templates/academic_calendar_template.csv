@@ -1,0 +1,4 @@
+id,type (holiday/exam_window/event),name,startDate (YYYY-MM-DD),endDate (YYYY-MM-DD)
+1,holiday,Diwali Break,2024-10-31,2024-11-04
+2,exam_window,Mid-Term Exams,2024-12-09,2024-12-18
+3,holiday,Winter Break,2024-12-25,2025-01-05
