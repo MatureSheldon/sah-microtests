@@ -43,6 +43,7 @@ export function MicrotestBuilder() {
   // Preview State
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
   const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
+  const [topicModal, setTopicModal] = useState<{ sourceId: string; selectedType: string | null } | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const loadBank = (forceRefresh = false) => {
@@ -202,6 +203,67 @@ export function MicrotestBuilder() {
     const newLocks = new Set(lockedIds);
     newLocks.delete(id);
     setLockedIds(newLocks);
+  };
+
+  const sourceTopicQuestion = topicModal ? selectedQuestions.find(q => q.id === topicModal.sourceId) : null;
+  const topicPool = sourceTopicQuestion
+    ? activeQuestions.filter(q =>
+      q.useInPapers === 'Yes' &&
+      q.id !== sourceTopicQuestion.id &&
+      q.topic === sourceTopicQuestion.topic &&
+      !selectedQuestions.some(selected => selected.id === q.id)
+    )
+    : [];
+  const topicTypeCounts = topicPool.reduce<Record<string, number>>((counts, q) => {
+    counts[q.questionType] = (counts[q.questionType] || 0) + 1;
+    return counts;
+  }, {});
+  const topicTypes = Object.keys(topicTypeCounts).sort();
+
+  const openTopicModal = (sourceId: string) => {
+    const source = selectedQuestions.find(q => q.id === sourceId);
+    if (!source) return;
+    const used = new Set(selectedQuestions.map(q => q.id));
+    const sameTopicPool = activeQuestions.filter(q =>
+      q.useInPapers === 'Yes' &&
+      q.id !== source.id &&
+      q.topic === source.topic &&
+      !used.has(q.id)
+    );
+    const types = Array.from(new Set(sameTopicPool.map(q => q.questionType))).sort();
+    setTopicModal({
+      sourceId,
+      selectedType: types.includes(source.questionType) ? source.questionType : types[0] || null
+    });
+  };
+
+  const topicReplacement = () => {
+    if (!topicModal || !sourceTopicQuestion || !topicModal.selectedType) return null;
+    const candidates = topicPool.filter(q => q.questionType === topicModal.selectedType);
+    return candidates.find(q => q.difficulty === sourceTopicQuestion.difficulty && q.marks === sourceTopicQuestion.marks) ||
+      candidates.find(q => q.marks === sourceTopicQuestion.marks) ||
+      candidates[0] ||
+      null;
+  };
+
+  const handleTopicSwap = () => {
+    if (!topicModal || lockedIds.has(topicModal.sourceId)) return;
+    const replacement = topicReplacement();
+    if (!replacement) return;
+    setSelectedQuestions(selectedQuestions.map(q => q.id === topicModal.sourceId ? replacement : q));
+    setTopicModal(null);
+  };
+
+  const handleTopicAdd = () => {
+    if (!topicModal) return;
+    const addition = topicReplacement();
+    if (!addition) return;
+    const sourceIndex = selectedQuestions.findIndex(q => q.id === topicModal.sourceId);
+    const nextQuestions = [...selectedQuestions];
+    if (sourceIndex >= 0) nextQuestions.splice(sourceIndex + 1, 0, addition);
+    else nextQuestions.push(addition);
+    setSelectedQuestions(nextQuestions);
+    setTopicModal(null);
   };
 
   const handleExport = async () => {
@@ -525,6 +587,9 @@ export function MicrotestBuilder() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${diffColor}`}>{q.difficulty}</span>
                         <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200/60 text-[10px] font-medium">Ch {q.chapterNumber}</span>
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60 text-[10px] font-medium">{q.questionType}</span>
+                        {q.topic && (
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200/60 text-[10px] font-medium">{q.topic}</span>
+                        )}
                       </div>
 
                       <div className="text-sm text-slate-800 leading-snug mb-2" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.question) }} />
@@ -544,12 +609,21 @@ export function MicrotestBuilder() {
                         </div>
                       )}
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                        <button onClick={() => handleSwap(q.id)} className="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100">Swap</button>
-                        <button onClick={() => handleLock(q.id)} className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${isLocked ? 'bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30' : 'bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
-                          {isLocked ? 'Unlock' : 'Lock'}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <button
+                          onClick={() => openTopicModal(q.id)}
+                          disabled={!q.topic}
+                          className="px-3 py-1.5 rounded-md bg-blue-50/60 text-blue-600 border border-blue-100 text-[11px] font-medium hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          More from Topic
                         </button>
-                        <button onClick={() => handleRemove(q.id)} className="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50">Remove</button>
+                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                          <button onClick={() => handleSwap(q.id)} className="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100">Swap</button>
+                          <button onClick={() => handleLock(q.id)} className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${isLocked ? 'bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30' : 'bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
+                            {isLocked ? 'Unlock' : 'Lock'}
+                          </button>
+                          <button onClick={() => handleRemove(q.id)} className="px-2.5 py-1 text-[11px] font-medium rounded transition-colors bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50">Remove</button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -568,6 +642,72 @@ export function MicrotestBuilder() {
           )}
         </section>
       </div>
+
+      {topicModal && sourceTopicQuestion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setTopicModal(null)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+              <div>
+                <h3 className="text-sm font-semibold text-brand-primary">More From Topic</h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+                  Found questions matching <span className="font-semibold text-brand-accent">{sourceTopicQuestion.topic}</span>. Choose a type, then swap the current question or add a new one below it.
+                </p>
+              </div>
+              <button onClick={() => setTopicModal(null)} className="rounded-md px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">x</button>
+            </div>
+
+            <div className="p-5">
+              {topicTypes.length === 0 ? (
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-5 text-center text-[12px] text-slate-500">
+                  No additional questions are available for this topic.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {topicTypes.map(type => {
+                    const selected = topicModal.selectedType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setTopicModal({ ...topicModal, selectedType: type })}
+                        className={`rounded-lg border p-3 text-left transition-colors ${selected ? 'border-brand-accent bg-blue-50/60 ring-1 ring-brand-accent' : 'border-slate-200 hover:border-brand-accent/60'}`}
+                      >
+                        <div className="text-[13px] font-semibold text-slate-800">{type}</div>
+                        <div className="mt-0.5 text-[11px] font-medium text-slate-500">{topicTypeCounts[type]} available</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4">
+              <button
+                onClick={handleTopicSwap}
+                disabled={!topicModal.selectedType || lockedIds.has(topicModal.sourceId)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Swap Current
+              </button>
+              <button
+                onClick={handleTopicAdd}
+                disabled={!topicModal.selectedType}
+                className="rounded-lg bg-brand-accent px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add as New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
