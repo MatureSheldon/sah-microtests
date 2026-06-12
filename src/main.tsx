@@ -6,6 +6,12 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister());
+  });
+}
+
 const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
 const YearlyRoadmap = lazy(() => import('./pages/Roadmap').then((module) => ({ default: module.YearlyRoadmap })));
 const MicrotestBuilder = lazy(() => import('./pages/MicrotestBuilder').then((module) => ({ default: module.MicrotestBuilder })));

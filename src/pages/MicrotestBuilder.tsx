@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { BankData, fetchQuestionBank, Question } from '../lib/bank';
+import { BankData, clearQuestionBankCache, fetchQuestionBank, getStoredBankSettings, Question, saveStoredBankSettings } from '../lib/bank';
 import { generatePaper, replaceQuestion } from '../lib/generator';
 import { renderMarkdownToHtml } from '../lib/utils';
 
@@ -8,12 +8,18 @@ export function MicrotestBuilder() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const initialClass = searchParams.get('class') || '9';
-  const initialSubject = searchParams.get('subject') || 'Mathematics';
+  const normalizeSubject = (value: string) => /^(maths|math)$/i.test(String(value || '').trim()) ? 'Mathematics' : String(value || '').trim();
+  const initialSubject = normalizeSubject(searchParams.get('subject') || 'Mathematics');
   const initialChapter = searchParams.get('chapter') || '';
+  const initialChapterNumber = Number(initialChapter.match(/\d+/)?.[0] || 1);
 
   const [bank, setBank] = useState<BankData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadStartedAt] = useState(() => Date.now());
+  const [settings, setSettings] = useState(() => getStoredBankSettings());
+  const [settingsOpen, setSettingsOpen] = useState(() => !getStoredBankSettings().url && !import.meta.env.VITE_GOOGLE_SHEETS_URL);
+  const [bankStatus, setBankStatus] = useState('Connecting...');
 
   // Document Profile State
   const [klass, setKlass] = useState(initialClass);
@@ -24,7 +30,7 @@ export function MicrotestBuilder() {
 
   // Blueprint State
   const [chapters, setChapters] = useState<{ id: string; num: number; target: number }[]>([
-    { id: 'c1', num: parseInt(initialChapter) || 1, target: 100 }
+    { id: 'c1', num: initialChapterNumber, target: 100 }
   ]);
 
   // Parameters State
@@ -39,49 +45,122 @@ export function MicrotestBuilder() {
   const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
+  const loadBank = (forceRefresh = false) => {
+    setLoading(true);
+    setError(null);
+    setBankStatus(forceRefresh ? 'Refreshing...' : 'Connecting...');
+    if (forceRefresh) clearQuestionBankCache();
+
     fetchQuestionBank().then((data) => {
       setBank(data);
-      const types = Array.from(new Set(data.questions.map(q => q.questionType)));
+      const types = Array.from(new Set(data.questions.map(q => q.questionType))).filter(Boolean);
       setSelectedTypes(types);
+      const sourceLabel = data.connection?.source === 'google-sheets'
+        ? 'Google Sheets connected'
+        : data.connection?.source === 'cached-google-sheets'
+          ? 'Google Sheets cached'
+          : 'Local fallback file';
+      setBankStatus(sourceLabel);
       setLoading(false);
     }).catch((err) => {
       console.error(err);
       setError(err.message || String(err));
+      setBankStatus('Connection failed');
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadBank();
   }, []);
 
-  const availableClasses = (bank?.product ? bank.product.classes : bank ? Array.from(new Set(bank.questions.map(q => q.classLevel))).sort() : []) || [];
-  const availableSubjects = (bank?.product && bank.product.subjectsByClass[klass] 
-    ? bank.product.subjectsByClass[klass] 
-    : bank ? Array.from(new Set(bank.questions.filter(q => q.classLevel === klass).map(q => q.subject))).sort() : []) || [];
-  
-  const availableChapters = (bank ? Array.from(new Set(bank.questions.filter(q => q.classLevel === klass && q.subject === subject).map(q => q.chapterNumber))).sort((a,b)=>a-b) : []) || [];
+  const datasetOptions = useMemo(() => {
+    if (!bank) return [];
+    const map = new Map<string, { classLevel: string; subject: string }>();
+    for (const q of bank.questions) {
+      if (q.useInPapers !== 'Yes' || !q.classLevel || !q.subject) continue;
+      map.set(`${q.classLevel}|${q.subject}`, { classLevel: q.classLevel, subject: q.subject });
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.classLevel.localeCompare(b.classLevel, undefined, { numeric: true }) || a.subject.localeCompare(b.subject)
+    );
+  }, [bank]);
+
+  const availableClasses = useMemo(() => {
+    const productClasses = bank?.product?.classes || [];
+    return Array.from(new Set([...productClasses, ...datasetOptions.map(d => d.classLevel)]))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [bank, datasetOptions]);
+
+  const availableSubjects = useMemo(() => {
+    const productSubjects = bank?.product?.subjectsByClass?.[klass] || [];
+    const datasetSubjects = datasetOptions.filter(d => d.classLevel === klass).map(d => d.subject);
+    return Array.from(new Set([...productSubjects, ...datasetSubjects]))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [bank, datasetOptions, klass]);
+
+  const activeQuestions = bank ? bank.questions.filter(q => q.classLevel === klass && q.subject === subject && q.useInPapers === 'Yes') : [];
+  const chapterOptions = useMemo(() => {
+    if (!bank) return [];
+    const map = new Map<number, { num: number; name: string; count: number }>();
+    for (const chapter of bank.chapters) {
+      if (chapter.classLevel !== klass || chapter.subject !== subject || !chapter.chapterNumber) continue;
+      map.set(chapter.chapterNumber, {
+        num: chapter.chapterNumber,
+        name: chapter.chapterName || `Chapter ${chapter.chapterNumber}`,
+        count: 0
+      });
+    }
+    for (const question of activeQuestions) {
+      if (!question.chapterNumber) continue;
+      const existing = map.get(question.chapterNumber);
+      map.set(question.chapterNumber, {
+        num: question.chapterNumber,
+        name: existing?.name || question.chapterName || `Chapter ${question.chapterNumber}`,
+        count: (existing?.count || 0) + 1
+      });
+    }
+    return Array.from(map.values()).filter(chapter => chapter.count > 0).sort((a,b)=>a.num-b.num);
+  }, [bank, klass, subject, activeQuestions]);
+  const availableChapters = chapterOptions.map(chapter => chapter.num);
   const hasQuestions = availableChapters.length > 0;
 
   // Auto-reset chapters if the selected class/subject has no matching chapters currently selected
   useEffect(() => {
     if (availableChapters.length > 0) {
-      setChapters(prev => prev.map(ch => availableChapters.includes(ch.num) ? ch : { ...ch, num: availableChapters[0] }));
+      setChapters(prev => prev.length
+        ? prev.map(ch => availableChapters.includes(ch.num) ? ch : { ...ch, num: availableChapters[0] })
+        : [{ id: 'c1', num: availableChapters[0], target: 100 }]
+      );
     } else {
       setChapters([]);
     }
   }, [klass, subject, availableChapters.join(',')]);
 
+  useEffect(() => {
+    if (availableSubjects.length > 0 && !availableSubjects.includes(subject)) {
+      setSubject(availableSubjects[0]);
+    }
+  }, [availableSubjects, subject]);
+
   if (loading) {
+    const elapsedSeconds = Math.max(1, Math.round((Date.now() - loadStartedAt) / 1000));
     return (
-      <div className="max-w-[1600px] w-full grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8 items-start animate-pulse">
-        <div className="flex flex-col gap-6">
+      <div className="max-w-[1600px] w-full grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8 items-start">
+        <div className="flex flex-col gap-6 animate-pulse">
           <div className="h-[250px] bg-white border border-slate-100 rounded-2xl shadow-sm p-6" />
           <div className="h-[200px] bg-white border border-slate-100 rounded-2xl shadow-sm p-6" />
           <div className="h-[300px] bg-white border border-slate-100 rounded-2xl shadow-sm p-6" />
         </div>
-        <div className="h-[800px] bg-white border border-slate-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
-          <div className="h-10 bg-slate-100 rounded w-1/3 mb-8" />
-          <div className="h-32 bg-slate-50 rounded-lg" />
-          <div className="h-32 bg-slate-50 rounded-lg" />
-          <div className="h-32 bg-slate-50 rounded-lg" />
+        <div className="bg-white border border-border-subtle rounded-2xl shadow-sm p-8 min-h-[360px] flex flex-col justify-center text-center">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-brand-accent mb-2">Connecting to Question Bank</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Loading Class {initialClass} {initialSubject} questions...</h2>
+          <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+            Live Google Sheets may take a few seconds on the first load. After the first successful load, this bank is cached locally for faster revisits.
+          </p>
+          <p className="text-[12px] text-slate-400 mt-4">Waiting {elapsedSeconds}s</p>
         </div>
       </div>
     );
@@ -100,13 +179,13 @@ export function MicrotestBuilder() {
       hardPct,
       selectedTypes
     };
-    const pool = bank.questions.filter(q => q.classLevel === klass && q.subject === subject);
+    const pool = activeQuestions;
     const result = generatePaper(pool, blueprint, lockedIds, selectedQuestions);
     setSelectedQuestions(result);
   };
 
   const handleSwap = (id: string) => {
-    const pool = bank.questions.filter(q => q.classLevel === klass && q.subject === subject);
+    const pool = activeQuestions;
     const result = replaceQuestion(id, pool, selectedQuestions, lockedIds);
     setSelectedQuestions(result);
   };
@@ -143,7 +222,41 @@ export function MicrotestBuilder() {
     }
   };
 
+  const totalUsableQuestions = bank.questions.filter(q => q.useInPapers === 'Yes').length;
+  const totalDatasets = datasetOptions.length;
+  const activeChapterCount = availableChapters.length;
+  const chapterTargetTotal = chapters.reduce((sum, chapter) => sum + Math.max(0, Number(chapter.target) || 0), 0);
+  const chapterColors = ['bg-brand-accent', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500'];
+  const chapterLabel = (num: number) => {
+    const option = chapterOptions.find(chapter => chapter.num === num);
+    return option?.name ? `Ch ${num}: ${option.name}` : `Chapter ${num}`;
+  };
   const currentMarks = selectedQuestions.reduce((s, q) => s + q.marks, 0);
+
+  const handleSaveSettings = () => {
+    saveStoredBankSettings(settings.url, settings.passcode);
+    setSettingsOpen(false);
+    loadBank(true);
+  };
+
+  const handleAddChapter = () => {
+    const used = new Set(chapters.map(chapter => chapter.num));
+    const nextChapter = availableChapters.find(chapter => !used.has(chapter)) || availableChapters[0] || 1;
+    if (!chapters.length) {
+      setChapters([{ id: Math.random().toString(), num: nextChapter, target: 100 }]);
+      return;
+    }
+
+    const newTarget = 10;
+    const largestIndex = chapters.reduce((bestIndex, chapter, index) =>
+      chapter.target > chapters[bestIndex].target ? index : bestIndex
+    , 0);
+    const rebalanced = chapters.map((chapter, index) => index === largestIndex
+      ? { ...chapter, target: Math.max(0, chapter.target - newTarget) }
+      : chapter
+    );
+    setChapters([...rebalanced, { id: Math.random().toString(), num: nextChapter, target: newTarget }]);
+  };
 
   return (
     <div className="max-w-[1600px] w-full grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8 items-start">
@@ -152,11 +265,40 @@ export function MicrotestBuilder() {
         
         {/* Document Profile */}
         <section className="bg-white border border-border-subtle rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h2 className="text-[13px] font-semibold text-brand-primary uppercase tracking-wider">Document Profile</h2>
-            <span className="text-[11px] text-slate-500 font-medium">Bank Synced ✓</span>
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+            <div>
+              <h2 className="text-[13px] font-semibold text-brand-primary uppercase tracking-wider">Document Profile</h2>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {bankStatus} · {totalUsableQuestions} usable questions · {totalDatasets} dataset{totalDatasets === 1 ? '' : 's'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => loadBank(true)} className="px-2 py-1 text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50">Refresh</button>
+              <button onClick={() => setSettingsOpen(!settingsOpen)} className="px-2 py-1 text-[11px] font-semibold text-brand-accent bg-brand-accent/10 rounded hover:bg-brand-accent/20">Settings</button>
+            </div>
           </div>
           <div className="p-6">
+            {settingsOpen && (
+              <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+                <div className="grid gap-3">
+                  <label className="flex flex-col gap-1.5 text-[12px] font-medium text-slate-700">
+                    Google Apps Script URL
+                    <input value={settings.url} onChange={e => setSettings({ ...settings, url: e.target.value })} placeholder="https://script.google.com/macros/s/.../exec" className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[12px] outline-none" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-[12px] font-medium text-slate-700">
+                    Passcode optional
+                    <input value={settings.passcode} onChange={e => setSettings({ ...settings, passcode: e.target.value })} placeholder="Leave blank if not configured" className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[12px] outline-none" />
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleSaveSettings} className="px-3 py-2 bg-brand-accent text-white text-[12px] font-semibold rounded-lg">Save & reconnect</button>
+                    <button onClick={() => setSettingsOpen(false)} className="px-3 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-semibold rounded-lg">Close</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="mb-4 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-[12px] text-slate-600">
+              Active bank: <strong>{activeQuestions.length}</strong> usable questions · <strong>{activeChapterCount}</strong> chapter{activeChapterCount === 1 ? '' : 's'}
+            </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <label className="flex flex-col gap-1.5 text-[12px] font-medium text-slate-700">
                 Class
@@ -172,7 +314,7 @@ export function MicrotestBuilder() {
                 Subject
                 <select 
                   value={subject} 
-                  onChange={e => setSubject(e.target.value)}
+                  onChange={e => setSubject(normalizeSubject(e.target.value))}
                   className="h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[13px] outline-none"
                 >
                   {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
@@ -201,7 +343,7 @@ export function MicrotestBuilder() {
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h2 className="text-[13px] font-semibold text-brand-primary uppercase tracking-wider">Chapter Blueprint</h2>
             <button 
-              onClick={() => setChapters([...chapters, { id: Math.random().toString(), num: availableChapters[0] || 1, target: 10 }])}
+              onClick={handleAddChapter}
               className="px-2 py-1 text-[11px] font-semibold text-brand-accent bg-brand-accent/10 rounded hover:bg-brand-accent/20 transition-colors disabled:opacity-50"
               disabled={!hasQuestions}
             >
@@ -211,12 +353,33 @@ export function MicrotestBuilder() {
           <div className="p-6">
             {!hasQuestions ? (
               <p className="text-[12px] text-slate-500 italic py-2 text-center bg-slate-50 rounded-lg">
-                No questions available for Class {klass} {subject} in the local fallback bank.
+                No questions available for Class {klass} {subject}. Connected bank currently has: {datasetOptions.map(d => `Class ${d.classLevel} ${d.subject}`).join(', ') || 'no usable datasets'}.
               </p>
             ) : (
               <div className="flex flex-col gap-3 mb-4">
+                <div className="overflow-hidden rounded-full bg-slate-100 border border-slate-200 h-3 flex">
+                  {chapters.map((ch, i) => (
+                    <div
+                      key={ch.id}
+                      className={`${chapterColors[i % chapterColors.length]} transition-all`}
+                      style={{ width: `${chapterTargetTotal > 0 ? (Math.max(0, ch.target) / chapterTargetTotal) * 100 : 0}%` }}
+                      title={`${chapterLabel(ch.num)} · ${ch.target}%`}
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {chapters.map((ch, i) => (
+                    <span key={ch.id} className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-[11px] text-slate-500">
+                      <span className={`h-2 w-2 rounded-full ${chapterColors[i % chapterColors.length]}`} />
+                      <span className="truncate">{chapterLabel(ch.num)} · {ch.target}%</span>
+                    </span>
+                  ))}
+                  <span className={`ml-auto text-[11px] font-semibold ${chapterTargetTotal === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    Total {chapterTargetTotal}%
+                  </span>
+                </div>
                 {chapters.map((ch, i) => (
-                  <div key={ch.id} className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div key={ch.id} className="grid grid-cols-[minmax(0,1fr)_86px_28px] items-end gap-3 p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
                     <select
                       value={ch.num}
                       onChange={(e) => {
@@ -226,24 +389,29 @@ export function MicrotestBuilder() {
                       }}
                       className="flex-1 h-8 px-2 text-[13px] bg-white border border-slate-200 rounded-md outline-none"
                     >
-                      {availableChapters.map(c => (
-                        <option key={c} value={c}>Chapter {c}</option>
+                      {chapterOptions.map(c => (
+                        <option key={c.num} value={c.num}>{chapterLabel(c.num)}</option>
                       ))}
                     </select>
-                    <span className="text-[11px] font-medium text-slate-500">Target %</span>
-                    <input 
-                      type="number" 
-                      value={ch.target}
-                      onChange={(e) => {
-                        const newCh = [...chapters];
-                        newCh[i].target = Number(e.target.value);
-                        setChapters(newCh);
-                      }}
-                      className="w-16 h-8 px-2 text-center text-[13px] font-semibold text-brand-accent bg-white border border-slate-200 rounded-md outline-none"
-                    />
+                    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      Target %
+                      <input 
+                        type="number" 
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={ch.target}
+                        onChange={(e) => {
+                          const newCh = [...chapters];
+                          newCh[i].target = Number(e.target.value);
+                          setChapters(newCh);
+                        }}
+                        className="h-8 w-full px-2 text-center text-[13px] font-semibold text-brand-accent bg-white border border-slate-200 rounded-md outline-none focus:border-brand-accent"
+                      />
+                    </label>
                     <button 
                       onClick={() => setChapters(chapters.filter((_, idx) => idx !== i))}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                      className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
                     >
                       ✕
                     </button>

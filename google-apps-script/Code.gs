@@ -68,7 +68,7 @@ function doGet(event) {
     return jsonResponse({ ok: false, error: "Unauthorized: Invalid passcode" });
   }
   const action = event.parameter.action || "getBank";
-  if (action === "getBank") return jsonResponse(getQuestionBank());
+  if (action === "getBank") return jsonResponse(getQuestionBank(event.parameter || {}));
   return jsonResponse({ ok: false, error: "Unknown action" });
 }
 
@@ -100,16 +100,19 @@ function jsonResponse(value) {
   return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function getQuestionBank() {
+function getQuestionBank(params) {
   const ss = SpreadsheetApp.getActive();
+  const requestedClass = String(params.classLevel || params.class || CONFIG.activeClassLevel).trim();
+  const requestedSubject = String(params.subject || "").trim();
 
-  // Collect the expected subject tab names for the active class.
-  // Each subject lives in its own sheet tab named exactly after the subject.
-  const subjectsForActiveClass = CONFIG.subjectsByClass[CONFIG.activeClassLevel] || [];
+  // Each subject lives in its own sheet tab. The UI may say Mathematics while
+  // the tab is named Maths, so map common aliases before reading the sheet.
+  const subjectsForClass = CONFIG.subjectsByClass[requestedClass] || [];
+  const subjectsToRead = requestedSubject ? [subjectToSheetName(requestedSubject)] : subjectsForClass;
 
   const allQuestions = [];
 
-  for (const subject of subjectsForActiveClass) {
+  for (const subject of subjectsToRead) {
     const sheet = ss.getSheetByName(subject);
     if (!sheet) continue; // Tab not created yet — skip gracefully
     const values = sheet.getDataRange().getValues();
@@ -123,16 +126,22 @@ function getQuestionBank() {
     allQuestions.push(...questions);
   }
 
-  if (!allQuestions.length) return emptyBank();
+  if (!allQuestions.length) return emptyBank(requestedClass, requestedSubject);
 
-  const chapters = mergeChapters(readChaptersSheet(), uniqueChapters(allQuestions));
+  const chapters = mergeChapters(readChaptersSheet(), uniqueChapters(allQuestions))
+    .filter((chapter) => {
+      if (String(chapter.classLevel) !== requestedClass) return false;
+      if (!requestedSubject) return true;
+      return subjectToSheetName(chapter.subject) === subjectToSheetName(requestedSubject) ||
+        String(chapter.subject).trim() === requestedSubject;
+    });
 
   return {
     source: "Google Sheets",
     product: {
       schoolName: CONFIG.schoolName,
-      activeClassLevel: CONFIG.activeClassLevel,
-      activeSubject: CONFIG.activeSubject,
+      activeClassLevel: requestedClass,
+      activeSubject: requestedSubject || CONFIG.activeSubject,
       classes: CONFIG.classes,
       subjectsByClass: CONFIG.subjectsByClass,
       activeDatasets: uniqueDatasets(allQuestions, chapters),
@@ -156,13 +165,18 @@ function getQuestionBank() {
   };
 }
 
-function emptyBank() {
+function subjectToSheetName(subject) {
+  if (/^(mathematics|math)$/i.test(subject)) return "Maths";
+  return subject;
+}
+
+function emptyBank(requestedClass, requestedSubject) {
   return {
     source: "Google Sheets",
     product: {
       schoolName: CONFIG.schoolName,
-      activeClassLevel: CONFIG.activeClassLevel,
-      activeSubject: CONFIG.activeSubject,
+      activeClassLevel: requestedClass,
+      activeSubject: requestedSubject || CONFIG.activeSubject,
       classes: CONFIG.classes,
       subjectsByClass: CONFIG.subjectsByClass,
       activeDatasets: [],
