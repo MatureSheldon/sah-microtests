@@ -1,4 +1,6 @@
-import { LOAD_DAYS } from '../lib/data';
+import { useEffect, useState } from 'react';
+import { useTeacher } from './TeacherContext';
+import { getTeachingLoad } from '../lib/gateway';
 
 export function AdminCard() {
   return (
@@ -34,6 +36,25 @@ function AdminRow({ color, label, meta }: { color: string; label: string; meta: 
 }
 
 export function LoadCard() {
+  const { teacher } = useTeacher();
+  const [loadDays, setLoadDays] = useState<{ day: string; periods: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (teacher) {
+      setLoading(true);
+      getTeachingLoad(teacher.teacher_id)
+        .then(setLoadDays)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [teacher?.teacher_id]);
+
+  if (!teacher) return null;
+
+  const maxPeriods = Math.max(1, ...loadDays.map(ld => ld.periods));
+  const peakDay = loadDays.find(ld => ld.periods === maxPeriods)?.day || '';
+
   return (
     <div className="p-8 border border-border-subtle bg-white rounded-3xl">
       <div className="flex items-start justify-between mb-4">
@@ -42,38 +63,47 @@ export function LoadCard() {
           <p className="text-sm text-slate-500">Periods per day this week</p>
         </div>
         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded uppercase tracking-wider">
-          Balanced
+          {maxPeriods > 6 ? 'Heavy' : 'Balanced'}
         </span>
       </div>
       <div className="space-y-4">
-        <div className="flex items-end gap-3 h-36 pt-4">
-          {LOAD_DAYS.map((d) => (
-            <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
-              <div
-                className={
-                  d.h === Math.max(...LOAD_DAYS.map(ld => ld.h))
-                    ? "w-full bg-brand-accent rounded-t-md"
-                    : "w-full bg-slate-100 rounded-t-md"
-                }
-                style={{ height: `${d.h}%` }}
-              />
+        {loading ? (
+          <div className="h-36 pt-4 flex items-center justify-center text-sm text-slate-400">Loading analysis...</div>
+        ) : (
+          <>
+            <div className="flex items-end gap-3 h-36 pt-4">
+              {loadDays.map((d) => (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
+                  <div
+                    className={
+                      d.periods === maxPeriods
+                        ? "w-full bg-brand-accent rounded-t-md"
+                        : "w-full bg-slate-100 rounded-t-md"
+                    }
+                    style={{ height: `${(d.periods / maxPeriods) * 100}%` }}
+                    title={`${d.periods} periods`}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="flex gap-3">
-          {LOAD_DAYS.map((d) => (
-            <span
-              key={d.day}
-              className="flex-1 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-            >
-              {d.day}
-            </span>
-          ))}
-        </div>
-        <p className="text-xs text-slate-500 mt-4 leading-relaxed italic border-l-2 border-brand-accent/30 pl-3">
-          "Peak teaching load detected for Wednesday (7 periods). Ensure all lesson plans
-          are pre-synced for offline use before Tuesday evening."
-        </p>
+            <div className="flex gap-3">
+              {loadDays.map((d) => (
+                <span
+                  key={d.day}
+                  className="flex-1 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                >
+                  {d.day}
+                </span>
+              ))}
+            </div>
+            {maxPeriods >= 6 && (
+              <p className="text-xs text-slate-500 mt-4 leading-relaxed italic border-l-2 border-brand-accent/30 pl-3">
+                "Peak teaching load detected for {peakDay} ({maxPeriods} periods). Ensure all lesson plans
+                are pre-synced for offline use before {peakDay === 'Mon' ? 'Sunday' : 'the previous'} evening."
+              </p>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

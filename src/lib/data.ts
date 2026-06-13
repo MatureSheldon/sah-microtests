@@ -57,96 +57,7 @@ export const NAV: NavItem[] = [
   { label: 'Admin Console', key: 'admin' },
 ];
 
-/* ─── Sample: Teacher's classes ─── */
 
-export const MY_CLASSES = [
-  'Class 10-B · Maths',
-  'Class 10-A · Maths',
-  'Class 9-C · Maths',
-  'Class 12-A · Applied Maths',
-  'Class 8-A · Science',
-];
-
-/* ─── Sample: Today's Periods ─── */
-
-export const PERIODS: Period[] = [
-  {
-    no: 1,
-    start: '08:30',
-    end: '09:15',
-    klass: 'Class 8-A',
-    subject: 'Science',
-    chapter: 'Ch 3: Coal & Petroleum',
-    topic: 'Fractional distillation of crude oil',
-    state: 'done',
-    status: 'on-track',
-  },
-  {
-    no: 2,
-    start: '09:15',
-    end: '10:00',
-    klass: 'Class 9-C',
-    subject: 'Mathematics',
-    chapter: 'Ch 6: Lines and Angles',
-    topic: 'Recap: vertically opposite angles',
-    state: 'done',
-    status: 'on-track',
-  },
-  {
-    no: 0,
-    start: '10:00',
-    end: '10:15',
-    klass: '',
-    subject: '',
-    chapter: '',
-    topic: 'Short Break',
-    state: 'break',
-  },
-  {
-    no: 3,
-    start: '10:45',
-    end: '11:30',
-    klass: 'Class 10-B',
-    subject: 'Mathematics',
-    chapter: 'Ch 4: Quadratic Equations',
-    topic: 'Nature of Roots — Discriminant',
-    state: 'active',
-    status: 'on-track',
-  },
-  {
-    no: 4,
-    start: '11:30',
-    end: '12:15',
-    klass: 'Class 12-A',
-    subject: 'Applied Maths',
-    chapter: 'Ch 7: Integrals',
-    topic: 'Integration by substitution',
-    state: 'next',
-    status: 'behind',
-  },
-  {
-    no: 5,
-    start: '12:15',
-    end: '13:00',
-    klass: 'Class 9-C',
-    subject: 'Mathematics',
-    chapter: 'Ch 7: Triangles',
-    topic: 'Congruence criteria (SAS, ASA)',
-    state: 'later',
-    status: 'on-track',
-  },
-  {
-    no: 6,
-    start: '13:45',
-    end: '14:30',
-    klass: 'Class 10-A',
-    subject: 'Mathematics',
-    chapter: 'Ch 4: Quadratic Equations',
-    topic: 'Practice set 4.3',
-    state: 'later',
-    status: 'on-track',
-  },
-];
 
 /* ─── Sample: Yearly Roadmap ─── */
 
@@ -158,16 +69,7 @@ export const ROADMAP: Chapter[] = [
   { no: '06', title: 'Triangles', state: 'upcoming', meta: 'Starts Nov 18 • 12 Periods', progress: 0 },
 ];
 
-/* ─── Sample: Teaching Load ─── */
 
-export const LOAD_DAYS = [
-  { day: 'Mon', h: 80 },
-  { day: 'Tue', h: 60 },
-  { day: 'Wed', h: 95 },
-  { day: 'Thu', h: 70 },
-  { day: 'Fri', h: 55 },
-  { day: 'Sat', h: 25 },
-];
 
 /* ─── Mock Data for Scheduling Engine ─── */
 import { TimetableEntry, AcademicEvent } from './scheduling';

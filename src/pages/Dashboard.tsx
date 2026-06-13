@@ -1,8 +1,13 @@
-import { PERIODS, ROADMAP } from '../lib/data';
+import { useState, useEffect, useMemo } from 'react';
+import { useTeacher } from '../components/TeacherContext';
+import { getDashboard, getTeachingLoad } from '../lib/gateway';
+import type { DashboardData, DashboardPeriod } from '../lib/models';
 import { ActivePeriodCard, UpcomingPeriodCard, DimPeriodCard } from '../components/PeriodCards';
 import { TimelineChip } from '../components/TimelineChip';
 import { ChapterNode } from '../components/ChapterNode';
 import { AdminCard, LoadCard } from '../components/DashboardWidgets';
+import { Link } from 'react-router-dom';
+import { ROADMAP } from '../lib/data';
 
 export function Dashboard() {
   return (
@@ -14,15 +19,63 @@ export function Dashboard() {
   );
 }
 
-import { useState } from 'react';
-
 function TodaySection() {
-  const teaching = PERIODS.filter((p) => p.state !== "break");
-  const done = teaching.filter((p) => p.state === "done").length;
+  const { teacher } = useTeacher();
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!teacher) return;
+    setLoading(true);
+    const today = new Date().toISOString().split('T')[0];
+    getDashboard(teacher.teacher_id, today)
+      .then(setDashboard)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [teacher?.teacher_id]);
+
+  const periods = dashboard?.periods || [];
+  const teaching = periods.filter((p) => p.slot.slot_type !== 'break');
+  const done = teaching.filter((p) => p.progress_status === 'completed').length;
+  const currentPeriod = teaching.find(p => p.progress_status === 'in_progress');
   
-  // By default, expand the active period (or the first one if none is active)
-  const defaultActive = PERIODS.find((p) => p.state === "active")?.no || PERIODS[0]?.no;
-  const [expandedPeriodNo, setExpandedPeriodNo] = useState<number>(defaultActive);
+  const defaultActive = currentPeriod?.slot.period_no || teaching[0]?.slot.period_no;
+  const [expandedPeriodNo, setExpandedPeriodNo] = useState<number | undefined>();
+
+  // Set default expanded when data arrives
+  useEffect(() => {
+    if (defaultActive !== undefined && expandedPeriodNo === undefined) {
+      setExpandedPeriodNo(defaultActive);
+    }
+  }, [defaultActive]);
+
+  if (!teacher) {
+    return (
+      <section className="space-y-4">
+        <div className="bg-white border border-border-subtle rounded-2xl p-8 text-center">
+          <p className="text-slate-500 text-sm">Please select a teacher to view today's schedule.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (loading) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">Today's Periods</h2>
+            <p className="text-sm text-slate-500">Loading schedule...</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-48 bg-white border border-slate-100 rounded-2xl shadow-sm animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4">
@@ -30,36 +83,37 @@ function TodaySection() {
         <div>
           <h2 className="text-xl font-bold tracking-tight">Today's Periods</h2>
           <p className="text-sm text-slate-500">
-            {done} of {teaching.length} completed · Class 10-B starting now
+            {done} of {teaching.length} completed
+            {currentPeriod ? ` · ${currentPeriod.class_label}-${currentPeriod.section_label} ${currentPeriod.subject_name} now` : ''}
           </p>
         </div>
-        <button className="text-sm font-semibold text-brand-accent hover:underline">
+        <Link to="/timetable" className="text-sm font-semibold text-brand-accent hover:underline">
           View Full Timetable →
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {teaching.map((p) => {
-          const isExpanded = p.no === expandedPeriodNo;
+          const isExpanded = p.slot.period_no === expandedPeriodNo;
           
           if (isExpanded) {
             return (
-              <div key={p.no} className="lg:col-span-2 cursor-pointer transition-all h-full" onClick={() => setExpandedPeriodNo(p.no)}>
+              <div key={p.slot.slot_id} className="lg:col-span-2 cursor-pointer transition-all h-full" onClick={() => setExpandedPeriodNo(p.slot.period_no)}>
                 <ActivePeriodCard period={p} />
               </div>
             );
           }
           
-          if (p.state === "done" || p.state === "later") {
+          if (p.progress_status === 'completed') {
             return (
-              <div key={p.no} className="cursor-pointer transition-all hover:scale-[1.02] h-full" onClick={() => setExpandedPeriodNo(p.no)}>
+              <div key={p.slot.slot_id} className="cursor-pointer transition-all hover:scale-[1.02] h-full" onClick={() => setExpandedPeriodNo(p.slot.period_no)}>
                 <DimPeriodCard period={p} />
               </div>
             );
           }
           
           return (
-            <div key={p.no} className="cursor-pointer transition-all hover:scale-[1.02] h-full" onClick={() => setExpandedPeriodNo(p.no)}>
+            <div key={p.slot.slot_id} className="cursor-pointer transition-all hover:scale-[1.02] h-full" onClick={() => setExpandedPeriodNo(p.slot.period_no)}>
               <UpcomingPeriodCard period={p} />
             </div>
           );
@@ -69,8 +123,8 @@ function TodaySection() {
       {/* Timeline strip of all periods */}
       <div className="bg-white border border-border-subtle rounded-2xl p-4 mt-2">
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {PERIODS.map((p, idx) => (
-            <TimelineChip key={idx} period={p} />
+          {periods.map((p) => (
+            <TimelineChip key={p.slot.slot_id} period={p} />
           ))}
         </div>
       </div>

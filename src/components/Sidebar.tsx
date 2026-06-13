@@ -1,8 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
-import { NAV, MY_CLASSES } from '../lib/data';
+import { NAV } from '../lib/data';
+import { useTeacher } from './TeacherContext';
+import { useEffect, useState } from 'react';
+import { getTeacherClasses } from '../lib/gateway';
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
+  const { teacher, setTeacherId } = useTeacher();
+  const [myClasses, setMyClasses] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (teacher) {
+      getTeacherClasses(teacher.teacher_id).then(setMyClasses).catch(() => setMyClasses([]));
+    }
+  }, [teacher?.teacher_id]);
 
   return (
     <aside className="w-64 border-r border-border-subtle bg-surface-card flex flex-col h-full shrink-0">
@@ -53,7 +64,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             My Classes
           </div>
           <div className="space-y-1 text-sm">
-            {MY_CLASSES.map((c) => (
+            {myClasses.map((c) => (
               <a
                 key={c}
                 href="#"
@@ -62,6 +73,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 {c}
               </a>
             ))}
+            {myClasses.length === 0 && (
+              <p className="px-3 py-1.5 text-xs text-slate-400 italic">No classes assigned</p>
+            )}
           </div>
         </div>
       </div>
@@ -71,8 +85,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Active Session
           </p>
-          <p className="text-sm font-bold">Mrs. Anjali Bisht</p>
-          <p className="text-xs text-slate-500">Senior PGT · Mathematics</p>
+          {teacher ? (
+            <>
+              <p className="text-sm font-bold">{teacher.teacher_name}</p>
+              <p className="text-xs text-slate-500">{teacher.email}</p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-400 italic">No teacher selected</p>
+          )}
+          <button 
+            onClick={() => setTeacherId('')}
+            className="mt-2 text-[11px] text-brand-accent hover:underline font-medium"
+          >
+            Switch Teacher
+          </button>
         </div>
       </div>
     </aside>

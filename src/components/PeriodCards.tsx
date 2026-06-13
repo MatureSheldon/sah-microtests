@@ -1,88 +1,150 @@
 import { Link } from 'react-router-dom';
-import { Period } from '../lib/data';
+import type { DashboardPeriod } from '../lib/models';
+import { useState } from 'react';
+import { MarkDoneDialog } from './MarkDoneDialog';
+import { HomeworkViewer } from './HomeworkViewer';
 
-export function ActivePeriodCard({ period }: { period: Period }) {
+export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
+  const [markDoneOpen, setMarkDoneOpen] = useState(false);
+  const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const r = period.resources;
+
   return (
-    <div className="p-6 bg-white border-2 border-brand-accent rounded-2xl shadow-sm relative overflow-hidden h-full">
-      <div className="absolute top-0 right-0 p-4">
-        <span className="flex h-2 w-2 rounded-full bg-brand-accent animate-pulse" />
-      </div>
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs font-bold px-2 py-1 bg-brand-accent text-white rounded">
-            PERIOD {period.no}
-          </span>
-          <span className="text-sm text-slate-500">
-            {period.start} — {period.end}
-          </span>
+    <>
+      <div className="p-6 bg-white border-2 border-brand-accent rounded-2xl shadow-sm relative overflow-hidden h-full">
+        <div className="absolute top-0 right-0 p-4">
+          <span className="flex h-2 w-2 rounded-full bg-brand-accent animate-pulse" />
         </div>
-        <h3 className="text-2xl font-bold mb-1">
-          {period.klass}: {period.subject}
-        </h3>
-        <p className="text-slate-500 mb-6">
-          {period.chapter} •{" "}
-          <span className="text-brand-accent font-medium">Topic: {period.topic}</span>
-        </p>
+        <div className="flex flex-col h-full">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs font-bold px-2 py-1 bg-brand-accent text-white rounded">
+              PERIOD {period.slot.period_no}
+            </span>
+            <span className="text-sm text-slate-500">
+              {period.slot.start_time} — {period.slot.end_time}
+            </span>
+            {!period.is_content_available && (
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded">
+                Preview Only
+              </span>
+            )}
+          </div>
+          <h3 className="text-2xl font-bold mb-1">
+            {period.class_label}-{period.section_label}: {period.subject_name}
+          </h3>
+          <p className="text-slate-500 mb-6">
+            {period.chapter_title ? `Ch: ${period.chapter_title}` : 'No chapter assigned'} •{" "}
+            <span className="text-brand-accent font-medium">Topic: {period.topic_title || 'TBD'}</span>
+          </p>
 
-        <div className="grid grid-cols-4 gap-2 mt-auto">
-          <ResourceTile label="Plan" cta="Review PDF" />
-          <ResourceTile label="Concept" cta="Open Map" />
-          <ResourceTile label="Homework" cta="Ex. 4.3" />
-          <ResourceTile 
-            label="Test" 
-            cta="Microtest" 
-            to={`/microtests?class=${encodeURIComponent(period.klass.split(' ')[1]?.split('-')[0] || '')}&subject=${encodeURIComponent(period.subject)}&chapter=${encodeURIComponent(period.chapter)}`} 
-          />
-        </div>
+          <div className="grid grid-cols-4 gap-2 mt-auto">
+            <ResourceTile 
+              label="Plan" 
+              cta={r.has_lesson_plan ? 'Review PDF' : 'Not available'}
+              disabled={!r.has_lesson_plan}
+            />
+            <ResourceTile 
+              label="Concept" 
+              cta={r.has_concept_map ? 'Open Map' : 'Not available'}
+              disabled={!r.has_concept_map}
+            />
+            <ResourceTile 
+              label="Homework" 
+              cta={r.has_homework ? 'View Set' : 'Not available'}
+              disabled={!r.has_homework}
+              onClick={() => setHomeworkOpen(true)}
+            />
+            <ResourceTile 
+              label="Test" 
+              cta={r.has_microtest ? 'Microtest' : 'Not available'}
+              disabled={!r.has_microtest}
+              to={r.has_microtest 
+                ? `/microtests?class=${encodeURIComponent(r.microtest_class || '')}&subject=${encodeURIComponent(r.microtest_subject || '')}&chapter=${encodeURIComponent(r.microtest_chapter || '')}`
+                : undefined
+              }
+            />
+          </div>
 
-        <div className="flex gap-2 mt-4">
-          <button className="flex-1 py-2 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors">
-            Mark Done
-          </button>
-          <button 
-            className="flex-1 py-2 bg-slate-50 border border-border-subtle text-brand-primary text-xs font-semibold rounded-lg hover:bg-slate-100 transition-colors"
-            onClick={() => alert("Smart Board integration coming soon!")}
-          >
-            Open Smart Board
-          </button>
+          <div className="flex gap-2 mt-4">
+            <button 
+              onClick={() => setMarkDoneOpen(true)}
+              className="flex-1 py-2 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              Mark Done
+            </button>
+            <button 
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                r.has_smart_board 
+                  ? 'bg-slate-50 border border-border-subtle text-brand-primary hover:bg-slate-100'
+                  : 'bg-slate-50 border border-border-subtle text-slate-400 cursor-not-allowed'
+              }`}
+              disabled={!r.has_smart_board}
+              onClick={() => r.has_smart_board && alert("Smart Board integration coming soon!")}
+            >
+              {r.has_smart_board ? 'Open Smart Board' : 'Smart Board N/A'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {markDoneOpen && (
+        <MarkDoneDialog 
+          period={period} 
+          onClose={() => setMarkDoneOpen(false)} 
+        />
+      )}
+
+      {homeworkOpen && (
+        <HomeworkViewer 
+          period={period} 
+          onClose={() => setHomeworkOpen(false)} 
+        />
+      )}
+    </>
   );
 }
 
-function ResourceTile({ label, cta, to }: { label: string; cta: string; to?: string }) {
+function ResourceTile({ label, cta, to, disabled, onClick }: { label: string; cta: string; to?: string; disabled?: boolean; onClick?: () => void }) {
   const content = (
     <>
       <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">{label}</p>
-      <span className="text-xs font-semibold text-brand-accent">{cta}</span>
+      <span className={`text-xs font-semibold ${disabled ? 'text-slate-400' : 'text-brand-accent'}`}>{cta}</span>
     </>
   );
   
-  const className = "block w-full p-3 bg-slate-50 rounded-lg text-center border border-border-subtle hover:border-brand-accent transition-colors";
+  const className = `block w-full p-3 rounded-lg text-center border transition-colors ${
+    disabled 
+      ? 'bg-slate-50/50 border-slate-100 cursor-not-allowed opacity-60' 
+      : 'bg-slate-50 border-border-subtle hover:border-brand-accent'
+  }`;
 
-  if (to) {
+  if (to && !disabled) {
     return <Link to={to} className={className}>{content}</Link>;
   }
-  return <button className={className}>{content}</button>;
+  return <button className={className} disabled={disabled} onClick={onClick}>{content}</button>;
 }
 
-export function UpcomingPeriodCard({ period }: { period: Period }) {
+export function UpcomingPeriodCard({ period }: { period: DashboardPeriod }) {
   return (
     <div className="p-6 bg-white border border-border-subtle rounded-2xl shadow-sm hover:border-slate-300 transition-colors flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded">
-          PERIOD {period.no}
+          PERIOD {period.slot.period_no}
         </span>
-        <span className="text-sm text-slate-400">{period.start}</span>
+        <span className="text-sm text-slate-400">{period.slot.start_time}</span>
+        {!period.is_content_available && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded">
+            Preview
+          </span>
+        )}
       </div>
-      <h3 className="text-lg font-bold mb-1">{period.klass}</h3>
+      <h3 className="text-lg font-bold mb-1">{period.class_label}-{period.section_label}</h3>
       <p className="text-sm text-slate-500 mb-4">
-        {period.subject}: {period.topic}
+        {period.subject_name}: {period.topic_title || 'TBD'}
       </p>
-      {period.status === "behind" && (
+      {period.pacing === 'behind' && (
         <span className="self-start text-[10px] font-bold px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded uppercase tracking-wider mb-3">
-          Behind · -3 days
+          Behind Schedule
         </span>
       )}
       <div className="mt-auto pt-4 border-t border-slate-50">
@@ -104,32 +166,35 @@ export function UpcomingPeriodCard({ period }: { period: Period }) {
   );
 }
 
-export function DimPeriodCard({ period }: { period: Period }) {
-  if (!period) return null;
+export function DimPeriodCard({ period }: { period: DashboardPeriod }) {
   return (
     <div className="p-6 bg-white border border-border-subtle rounded-2xl shadow-sm opacity-70 hover:opacity-100 transition-all flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded">
-          PERIOD {period.no}
+          PERIOD {period.slot.period_no}
         </span>
-        <span className="text-sm text-slate-400">{period.start}</span>
+        <span className="text-sm text-slate-400">{period.slot.start_time}</span>
       </div>
-      <h3 className="text-lg font-bold mb-1">{period.klass}</h3>
+      <h3 className="text-lg font-bold mb-1">{period.class_label}-{period.section_label}</h3>
       <p className="text-sm text-slate-500 mb-4">
-        {period.subject}: {period.topic}
+        {period.subject_name}: {period.topic_title || 'TBD'}
       </p>
       <div className="space-y-2 text-xs text-slate-500">
         <div className="flex justify-between">
           <span>Chapter</span>
-          <span className="font-medium text-brand-primary">{period.chapter}</span>
+          <span className="font-medium text-brand-primary">{period.chapter_title || 'TBD'}</span>
         </div>
         <div className="flex justify-between">
-          <span>Materials</span>
-          <span className="font-medium text-brand-accent">Pre-loaded ✓</span>
+          <span>Content</span>
+          <span className={`font-medium ${period.is_content_available ? 'text-brand-accent' : 'text-slate-400'}`}>
+            {period.is_content_available ? 'Available ✓' : 'Not available yet'}
+          </span>
         </div>
         <div className="flex justify-between">
-          <span>Last taught</span>
-          <span className="font-medium text-brand-primary">2 days ago</span>
+          <span>Pacing</span>
+          <span className={`font-medium ${period.pacing === 'behind' ? 'text-rose-600' : period.pacing === 'ahead' ? 'text-emerald-600' : 'text-brand-primary'}`}>
+            {period.pacing === 'behind' ? 'Behind' : period.pacing === 'ahead' ? 'Ahead' : 'On Track'}
+          </span>
         </div>
       </div>
     </div>

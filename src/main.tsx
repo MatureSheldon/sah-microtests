@@ -1,8 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import React, { lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TeacherProvider } from './components/TeacherContext';
+import { TeacherSelector } from './components/TeacherSelector';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 
@@ -25,19 +27,22 @@ const FullTimetable = lazy(() => import('./pages/FullTimetable').then((module) =
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route index element={<Dashboard />} />
-            <Route path="year" element={<YearlyRoadmap />} />
-            <Route path="microtests" element={<MicrotestBuilder />} />
-            <Route path="chapters" element={<ChapterLibrary />} />
-            <Route path="chapters/:planId" element={<LessonPlanDetail />} />
-            <Route path="admin" element={<AdminConsole />} />
-            <Route path="timetable" element={<FullTimetable />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <TeacherProvider>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <TeacherSelector />
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route index element={<Dashboard />} />
+              <Route path="year" element={<YearlyRoadmap />} />
+              <Route path="microtests" element={<MicrotestBuilder />} />
+              <Route path="chapters" element={<ChapterLibrary />} />
+              <Route path="chapters/:planId" element={<LessonPlanDetail />} />
+              <Route path="admin" element={<AdminConsole />} />
+              <Route path="timetable" element={<FullTimetable />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </TeacherProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
