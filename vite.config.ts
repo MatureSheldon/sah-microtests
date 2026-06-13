@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
+  base: '/sah-microtests/',
   plugins: [
     react(), 
     tailwindcss(),
@@ -12,6 +13,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       devOptions: {
         enabled: false
+      },
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true
       },
       manifest: {
         name: 'SAH Command Center',

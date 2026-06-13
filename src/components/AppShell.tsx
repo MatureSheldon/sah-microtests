@@ -3,6 +3,16 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useState } from 'react';
 
+import { Suspense } from 'react';
+
+function RouteFallback() {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm font-medium text-slate-500 shadow-sm animate-pulse flex items-center justify-center min-h-[400px]">
+      Loading workspace...
+    </div>
+  );
+}
+
 export function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -25,7 +35,9 @@ export function AppShell() {
           <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
         </div>
         <div className="p-4 md:p-8 space-y-10 max-w-[1400px] w-full print:p-0 print:space-y-0 print:block mx-auto">
-          <Outlet />
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
     </div>

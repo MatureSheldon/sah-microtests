@@ -20,31 +20,23 @@ const LessonPlanDetail = lazy(() => import('./pages/LessonPlanDetail').then((mod
 const AdminConsole = lazy(() => import('./pages/AdminConsole').then((module) => ({ default: module.AdminConsole })));
 const FullTimetable = lazy(() => import('./pages/FullTimetable').then((module) => ({ default: module.FullTimetable })));
 
-function RouteFallback() {
-  return (
-    <div className="rounded-xl border border-border-subtle bg-white p-6 text-sm font-medium text-slate-500 shadow-sm">
-      Loading workspace...
-    </div>
-  );
-}
+
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route element={<AppShell />}>
-              <Route index element={<Dashboard />} />
-              <Route path="year" element={<YearlyRoadmap />} />
-              <Route path="microtests" element={<MicrotestBuilder />} />
-              <Route path="chapters" element={<ChapterLibrary />} />
-              <Route path="chapters/:planId" element={<LessonPlanDetail />} />
-              <Route path="admin" element={<AdminConsole />} />
-              <Route path="timetable" element={<FullTimetable />} />
-            </Route>
-          </Routes>
-        </Suspense>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<Dashboard />} />
+            <Route path="year" element={<YearlyRoadmap />} />
+            <Route path="microtests" element={<MicrotestBuilder />} />
+            <Route path="chapters" element={<ChapterLibrary />} />
+            <Route path="chapters/:planId" element={<LessonPlanDetail />} />
+            <Route path="admin" element={<AdminConsole />} />
+            <Route path="timetable" element={<FullTimetable />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>
