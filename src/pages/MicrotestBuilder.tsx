@@ -12,6 +12,7 @@ export function MicrotestBuilder() {
   const initialSubject = normalizeSubject(searchParams.get('subject') || 'Mathematics');
   const initialChapter = searchParams.get('chapter') || '';
   const initialChapterNumber = Number(initialChapter.match(/\d+/)?.[0] || 1);
+  const initialTopic = searchParams.get('topic') || '';
 
   const [bank, setBank] = useState<BankData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,7 +103,12 @@ export function MicrotestBuilder() {
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [bank, datasetOptions, klass]);
 
-  const activeQuestions = bank ? bank.questions.filter(q => q.classLevel === klass && q.subject === subject && q.useInPapers === 'Yes') : [];
+  const baseActiveQuestions = bank ? bank.questions.filter(q => q.classLevel === klass && q.subject === subject && q.useInPapers === 'Yes') : [];
+  const hasTopicQuestions = initialTopic ? baseActiveQuestions.some(q => q.topic === initialTopic) : false;
+  const activeQuestions = hasTopicQuestions 
+    ? baseActiveQuestions.filter(q => q.topic === initialTopic) 
+    : baseActiveQuestions;
+  const showTopicFallbackWarning = initialTopic && !hasTopicQuestions;
   const chapterOptions = useMemo(() => {
     if (!bank) return [];
     const map = new Map<number, { num: number; name: string; count: number }>();
@@ -358,8 +364,20 @@ export function MicrotestBuilder() {
                 </div>
               </div>
             )}
-            <div className="mb-4 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-[12px] text-slate-600">
-              Active bank: <strong>{activeQuestions.length}</strong> usable questions · <strong>{activeChapterCount}</strong> chapter{activeChapterCount === 1 ? '' : 's'}
+            <div className="mb-4 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-[12px] text-slate-600 flex flex-col gap-2">
+              <div>Active bank: <strong>{activeQuestions.length}</strong> usable questions · <strong>{activeChapterCount}</strong> chapter{activeChapterCount === 1 ? '' : 's'}</div>
+              {hasTopicQuestions && (
+                <div className="text-brand-accent font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-accent" />
+                  Filtered to exact topic: {initialTopic}
+                </div>
+              )}
+              {showTopicFallbackWarning && (
+                <div className="text-amber-600 font-semibold flex items-center gap-1.5 p-2 bg-amber-50 border border-amber-200 rounded">
+                  <span className="text-amber-500">⚠️</span>
+                  Topic "{initialTopic}" not found in bank. Falling back to entire chapter.
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <label className="flex flex-col gap-1.5 text-[12px] font-medium text-slate-700">

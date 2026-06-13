@@ -42,9 +42,19 @@ The master timetable.
 School holidays and exams.
 * `event_id`, `academic_year`, `event_type`, `event_name`, `start_date`, `end_date`, `is_working_day`
 
+### `teaching_plan`
+The mapped sequence of topics for a class-subject across the year.
+* `plan_id`, `academic_year`, `class_id`, `subject_id`, `sequence_no`, `chapter_id`, `topic_id`, `planned_periods`, `status`
+
 ### `teaching_progress_summary`
 Current state of each section-subject.
+* **Composite Key:** `academic_year` + `class_id` + `section_id` + `subject_id`
 * `summary_id`, `academic_year`, `class_id`, `section_id`, `subject_id`, `current_chapter_id`, `current_topic_id`, `teacher_id`, `status`
+
+### `topic_progress`
+Tracks completion of individual topics for each section.
+* **Composite Key:** `academic_year` + `class_id` + `section_id` + `subject_id` + `topic_id`
+* `progress_id`, `academic_year`, `class_id`, `section_id`, `subject_id`, `chapter_id`, `topic_id`, `status`, `completed_by_teacher_id`, `completed_on`, `last_updated`
 
 ### `period_completion_log` (Write-only)
 Appends a row whenever a teacher clicks "Mark Done".

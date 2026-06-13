@@ -129,9 +129,11 @@ export interface TeachingPlanItem {
   sequence_no: number;
   chapter_id: string;
   topic_id: string;
+  topic_title?: string;
   planned_periods: number;
   planned_week: number;
   status: 'active' | 'inactive';
+  status_type?: 'past_incomplete' | 'current' | 'upcoming';
 }
 
 export type TopicStatus =

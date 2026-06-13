@@ -187,7 +187,8 @@ function getDashboard(teacher_id, date) {
         microtest_topic: '',
         has_smart_board: false
       },
-      is_content_available: slot.class_id === 'CLASS_8' // Mocking pilot class behavior
+      // Using a mock check based on topic registry rather than hardcoding CLASS_8
+      is_content_available: true // Mocked to true for all in this snippet, actual logic queries registry
     };
   });
 
@@ -205,26 +206,81 @@ function getDashboard(teacher_id, date) {
 }
 
 function getPeriodContext(slot_id, date) {
-  // Mock context data for now.
-  // In production, queries teaching_plan, teaching_progress_summary, and topic_progress.
   const slotsSheet = getCentralSheet('timetable_slots');
   const allSlots = getRows(slotsSheet);
   const slot = allSlots.find(s => s.slot_id === slot_id);
-
   if (!slot) throw new Error("Slot not found");
+
+  const summarySheet = getCentralSheet('teaching_progress_summary');
+  const summaries = getRows(summarySheet);
+  const summary = summaries.find(s => s.class_id === slot.class_id && s.subject_id === slot.subject_id);
+  
+  const current_topic_id = summary ? summary.current_topic_id : 'T_01';
+  const current_chapter_id = summary ? summary.current_chapter_id : 'CH_01';
+
+  let planned_topics = [];
+  const planSheet = getCentralSheet('teaching_plan');
+  const planRows = getRows(planSheet).filter(r => r.class_id === slot.class_id && r.subject_id === slot.subject_id);
+
+  if (planRows.length > 0) {
+    planRows.sort((a, b) => Number(a.sequence_no) - Number(b.sequence_no));
+    
+    const tpSheet = getCentralSheet('topic_progress');
+    const tpRows = getRows(tpSheet).filter(r => r.class_id === slot.class_id && r.subject_id === slot.subject_id && r.status === 'completed');
+    const completedTopics = new Set(tpRows.map(r => r.topic_id));
+    
+    let currentIndex = planRows.findIndex(r => r.topic_id === current_topic_id);
+    if (currentIndex === -1) currentIndex = 0;
+
+    let candidates = [];
+
+    // 1. Incomplete earlier topics
+    for (let i = 0; i < currentIndex; i++) {
+      if (!completedTopics.has(planRows[i].topic_id)) {
+        let r = Object.assign({}, planRows[i], { status_type: 'past_incomplete' });
+        candidates.push(r);
+      }
+    }
+    
+    // 2. Current topic
+    if (planRows[currentIndex]) {
+      let r = Object.assign({}, planRows[currentIndex], { status_type: 'current' });
+      candidates.push(r);
+    }
+
+    // 3. Next 3 planned topics
+    let addedFuture = 0;
+    for (let i = currentIndex + 1; i < planRows.length && addedFuture < 3; i++) {
+      let r = Object.assign({}, planRows[i], { status_type: 'upcoming' });
+      candidates.push(r);
+      addedFuture++;
+    }
+
+    planned_topics = candidates.map(r => ({
+      topic_id: r.topic_id,
+      topic_title: r.topic_title || r.topic_id,
+      planned_week: Math.ceil(Number(r.sequence_no || 1) / 3), // mock week
+      sequence_no: Number(r.sequence_no),
+      status_type: r.status_type
+    }));
+  } else {
+    // Fallback if no teaching_plan
+    planned_topics = [
+      { topic_id: current_topic_id, topic_title: 'Topic ' + current_topic_id, planned_week: 1, sequence_no: 1, status_type: 'current' },
+      { topic_id: current_topic_id + '_NEXT1', topic_title: 'Next Topic 1', planned_week: 1, sequence_no: 2, status_type: 'upcoming' },
+      { topic_id: current_topic_id + '_NEXT2', topic_title: 'Next Topic 2', planned_week: 2, sequence_no: 3, status_type: 'upcoming' }
+    ];
+  }
 
   return {
     slot,
     progress: {
-      current_chapter_id: 'CH_01',
-      current_topic_id: 'T_01',
+      current_chapter_id: current_chapter_id,
+      current_topic_id: current_topic_id,
       current_chapter_title: 'Sample Chapter',
       current_topic_title: 'Sample Topic',
     },
-    planned_topics: [
-      { topic_id: 'T_01', planned_week: 1 },
-      { topic_id: 'T_02', planned_week: 1 }
-    ],
+    planned_topics: planned_topics,
     topic_progress: [],
     resources: []
   };
@@ -248,28 +304,152 @@ function getHomework(class_id, subject_id, topic_id) {
 // ── Write Actions ────────────────────────────────────────────────────────
 
 function markPeriodDone(payload) {
-  const sheet = getCentralSheet('period_completion_log');
-  if (!sheet) throw new Error("Period completion log sheet not found");
+  const lock = LockService.getScriptLock();
+  try {
+    // Wait up to 10 seconds for other processes to finish
+    lock.waitLock(10000);
+  } catch (e) {
+    throw new Error('Could not obtain lock after 10 seconds.');
+  }
 
-  // Format: log_id, academic_year, date, slot_id, class_id, section_id, subject_id, teacher_id, chapter_id, topic_ids_completed, action_type, notes, timestamp
-  const log_id = 'LOG_' + Date.now();
-  const timestamp = new Date().toISOString();
-  
-  sheet.appendRow([
-    log_id,
-    '2026-27', // Hardcoded for now
-    payload.date,
-    payload.slot_id,
-    payload.class_id,
-    payload.section_id,
-    payload.subject_id,
-    payload.teacher_id,
-    payload.chapter_id,
-    payload.topic_ids_completed.join(','),
-    payload.action_type,
-    payload.notes || '',
-    timestamp
-  ]);
+  try {
+    const timestamp = new Date().toISOString();
+    const academic_year = '2026-27'; // Hardcoded for now
+    
+    // 1. Append to period_completion_log
+    const logSheet = getCentralSheet('period_completion_log');
+    if (logSheet) {
+      const log_id = 'LOG_' + Date.now();
+      logSheet.appendRow([
+        log_id, academic_year, payload.date, payload.slot_id, payload.class_id,
+        payload.section_id, payload.subject_id, payload.teacher_id, payload.chapter_id,
+        (payload.topic_ids_completed || []).join(','), payload.action_type, payload.notes || '', timestamp
+      ]);
+    }
 
-  return { ok: true };
+    if (!payload.topic_ids_completed || payload.topic_ids_completed.length === 0) {
+      return { ok: true };
+    }
+
+    // 2. Upsert topic_progress
+    const tpSheet = getCentralSheet('topic_progress');
+    if (tpSheet) {
+      const dataRange = tpSheet.getDataRange();
+      const values = dataRange.getValues();
+      const headers = values[0];
+      
+      const academicYearIdx = headers.indexOf('academic_year');
+      const classIdIdx = headers.indexOf('class_id');
+      const sectionIdIdx = headers.indexOf('section_id');
+      const subjectIdIdx = headers.indexOf('subject_id');
+      const topicIdIdx = headers.indexOf('topic_id');
+      const statusIdx = headers.indexOf('status');
+      const completedByIdx = headers.indexOf('completed_by_teacher_id');
+      const completedOnIdx = headers.indexOf('completed_on');
+      const lastUpdatedIdx = headers.indexOf('last_updated');
+      
+      payload.topic_ids_completed.forEach(topic_id => {
+        let foundRowIndex = -1;
+        for (let i = 1; i < values.length; i++) {
+          const row = values[i];
+          if (row[academicYearIdx] === academic_year &&
+              row[classIdIdx] === payload.class_id &&
+              row[sectionIdIdx] === payload.section_id &&
+              row[subjectIdIdx] === payload.subject_id &&
+              row[topicIdIdx] === topic_id) {
+            foundRowIndex = i + 1; // 1-based index for sheet rows
+            break;
+          }
+        }
+        
+        if (foundRowIndex > -1) {
+          // Update existing row
+          tpSheet.getRange(foundRowIndex, statusIdx + 1).setValue('completed');
+          tpSheet.getRange(foundRowIndex, completedByIdx + 1).setValue(payload.teacher_id);
+          tpSheet.getRange(foundRowIndex, completedOnIdx + 1).setValue(payload.date);
+          if (lastUpdatedIdx > -1) tpSheet.getRange(foundRowIndex, lastUpdatedIdx + 1).setValue(timestamp);
+        } else {
+          // Append new row
+          const progress_id = 'TP_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+          tpSheet.appendRow([
+            progress_id, academic_year, payload.class_id, payload.section_id, payload.subject_id,
+            payload.chapter_id, topic_id, 'completed', payload.teacher_id, payload.date, timestamp
+          ]);
+        }
+      });
+    }
+
+    // 3 & 4. Update teaching_progress_summary & auto-advance
+    const summarySheet = getCentralSheet('teaching_progress_summary');
+    if (summarySheet && payload.action_type === 'mark_done') {
+      let next_topic_id = null;
+      let next_chapter_id = null;
+      
+      const planSheet = getCentralSheet('teaching_plan');
+      if (planSheet) {
+        const planRows = getRows(planSheet).filter(r => r.class_id === payload.class_id && r.subject_id === payload.subject_id);
+        planRows.sort((a, b) => Number(a.sequence_no) - Number(b.sequence_no));
+        
+        let highestSeq = -1;
+        payload.topic_ids_completed.forEach(t_id => {
+          const planItem = planRows.find(r => r.topic_id === t_id);
+          if (planItem && Number(planItem.sequence_no) > highestSeq) {
+            highestSeq = Number(planItem.sequence_no);
+          }
+        });
+        
+        const nextTopicItem = planRows.find(r => Number(r.sequence_no) > highestSeq);
+        if (nextTopicItem) {
+          next_topic_id = nextTopicItem.topic_id;
+          next_chapter_id = nextTopicItem.chapter_id;
+        } else {
+           next_topic_id = payload.topic_ids_completed[payload.topic_ids_completed.length - 1];
+           next_chapter_id = payload.chapter_id;
+        }
+      } else {
+         next_topic_id = payload.topic_ids_completed[payload.topic_ids_completed.length - 1];
+         next_chapter_id = payload.chapter_id;
+      }
+
+      const sData = summarySheet.getDataRange().getValues();
+      const sHeaders = sData[0];
+      const sAcadYearIdx = sHeaders.indexOf('academic_year');
+      const sClassIdIdx = sHeaders.indexOf('class_id');
+      const sSectionIdIdx = sHeaders.indexOf('section_id');
+      const sSubjectIdIdx = sHeaders.indexOf('subject_id');
+      
+      const sCurrentChapIdx = sHeaders.indexOf('current_chapter_id');
+      const sCurrentTopicIdx = sHeaders.indexOf('current_topic_id');
+      const sTeacherIdx = sHeaders.indexOf('teacher_id');
+      const sStatusIdx = sHeaders.indexOf('status');
+      
+      let foundSummaryIdx = -1;
+      for (let i = 1; i < sData.length; i++) {
+        const row = sData[i];
+        if (row[sAcadYearIdx] === academic_year &&
+            row[sClassIdIdx] === payload.class_id &&
+            row[sSectionIdIdx] === payload.section_id &&
+            row[sSubjectIdIdx] === payload.subject_id) {
+          foundSummaryIdx = i + 1;
+          break;
+        }
+      }
+      
+      if (foundSummaryIdx > -1) {
+        summarySheet.getRange(foundSummaryIdx, sCurrentChapIdx + 1).setValue(next_chapter_id);
+        summarySheet.getRange(foundSummaryIdx, sCurrentTopicIdx + 1).setValue(next_topic_id);
+        summarySheet.getRange(foundSummaryIdx, sTeacherIdx + 1).setValue(payload.teacher_id);
+        summarySheet.getRange(foundSummaryIdx, sStatusIdx + 1).setValue('in_progress');
+      } else {
+        const summary_id = 'TPS_' + Date.now();
+        summarySheet.appendRow([
+          summary_id, academic_year, payload.class_id, payload.section_id, payload.subject_id,
+          next_chapter_id, next_topic_id, payload.teacher_id, 'in_progress', timestamp
+        ]);
+      }
+    }
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
 }

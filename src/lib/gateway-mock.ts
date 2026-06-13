@@ -116,8 +116,12 @@ const PACING: Record<string, 'on-track' | 'behind' | 'ahead'> = {
   'CLASS_9|MATH|ALT': 'on-track',
 };
 
-// Class 8 is the pilot — only these have content
-const PILOT_KEYS = new Set(['CLASS_8|SCI', 'CLASS_8|MATH']);
+// Mock Resource Registry
+const MOCK_RESOURCE_REGISTRY: Record<string, boolean> = {
+  'SCI8_CH03_T01': true,
+  'MATH8_CH01_T01': true,
+  // Other topics do not have resources configured in the mock registry yet
+};
 
 function buildMockPeriods(now: Date): DashboardPeriod[] {
   const currentHour = now.getHours();
@@ -153,7 +157,9 @@ function buildMockPeriods(now: Date): DashboardPeriod[] {
     );
     const topicKey = seenBefore && TOPIC_INFO[altKey] ? altKey : baseKey;
     const info = TOPIC_INFO[topicKey] || { chapter: 'TBD', topic: 'TBD', chapterId: '', topicId: '' };
-    const isPilot = PILOT_KEYS.has(baseKey);
+    
+    // Check registry for this topic instead of hardcoded pilot list
+    const hasContent = !!MOCK_RESOURCE_REGISTRY[info.topicId];
 
     // Determine period state based on current time
     const [sh, sm] = slot.start_time.split(':').map(Number);
@@ -177,20 +183,20 @@ function buildMockPeriods(now: Date): DashboardPeriod[] {
       progress_status: progressStatus,
       pacing: PACING[topicKey] || 'on-track',
       resources: {
-        has_lesson_plan: isPilot,
-        lesson_plan_url: isPilot ? `/content/${slot.class_id.toLowerCase().replace('class_', 'class-')}/${slot.subject_id.toLowerCase()}/lesson-plan.md` : undefined,
-        has_concept_map: isPilot,
-        concept_map_url: isPilot ? `/content/${slot.class_id.toLowerCase().replace('class_', 'class-')}/${slot.subject_id.toLowerCase()}/concept-map.json` : undefined,
-        has_homework: isPilot,
-        homework_set_id: isPilot ? `HW_${slot.class_id}_${slot.subject_id}_${info.chapterId}_01` : undefined,
-        has_microtest: isPilot,
-        microtest_class: isPilot ? slot.class_id.replace('CLASS_', '') : undefined,
-        microtest_subject: isPilot ? SUBJECT_NAMES[slot.subject_id] : undefined,
-        microtest_chapter: isPilot ? info.chapter : undefined,
-        microtest_topic: isPilot ? info.topic : undefined,
+        has_lesson_plan: hasContent,
+        lesson_plan_url: hasContent ? `/content/${slot.class_id.toLowerCase().replace('class_', 'class-')}/${slot.subject_id.toLowerCase()}/lesson-plan.md` : undefined,
+        has_concept_map: hasContent,
+        concept_map_url: hasContent ? `/content/${slot.class_id.toLowerCase().replace('class_', 'class-')}/${slot.subject_id.toLowerCase()}/concept-map.json` : undefined,
+        has_homework: hasContent,
+        homework_set_id: hasContent ? `HW_${slot.class_id}_${slot.subject_id}_${info.chapterId}_01` : undefined,
+        has_microtest: hasContent,
+        microtest_class: hasContent ? slot.class_id.replace('CLASS_', '') : undefined,
+        microtest_subject: hasContent ? SUBJECT_NAMES[slot.subject_id] : undefined,
+        microtest_chapter: hasContent ? info.chapter : undefined,
+        microtest_topic: hasContent ? info.topic : undefined,
         has_smart_board: false,
       },
-      is_content_available: isPilot,
+      is_content_available: hasContent,
     };
   });
 }
@@ -244,8 +250,9 @@ export function mockGetPeriodContext(slotId: string): PeriodContext {
   };
 
   const planned: TeachingPlanItem[] = [
-    { plan_id: 'PLAN_1', academic_year: '2026-27', class_id: slot.class_id, subject_id: slot.subject_id, sequence_no: 1, chapter_id: info.chapterId, topic_id: info.topicId, planned_periods: 2, planned_week: 1, status: 'active' },
-    { plan_id: 'PLAN_2', academic_year: '2026-27', class_id: slot.class_id, subject_id: slot.subject_id, sequence_no: 2, chapter_id: info.chapterId, topic_id: info.topicId + '_NEXT', planned_periods: 2, planned_week: 2, status: 'active' },
+    { plan_id: 'PLAN_0', academic_year: '2026-27', class_id: slot.class_id, subject_id: slot.subject_id, sequence_no: 0, chapter_id: info.chapterId, topic_id: info.topicId + '_PREV', topic_title: 'Previous Topic', planned_periods: 2, planned_week: 1, status: 'active', status_type: 'past_incomplete' },
+    { plan_id: 'PLAN_1', academic_year: '2026-27', class_id: slot.class_id, subject_id: slot.subject_id, sequence_no: 1, chapter_id: info.chapterId, topic_id: info.topicId, topic_title: info.topic, planned_periods: 2, planned_week: 1, status: 'active', status_type: 'current' },
+    { plan_id: 'PLAN_2', academic_year: '2026-27', class_id: slot.class_id, subject_id: slot.subject_id, sequence_no: 2, chapter_id: info.chapterId, topic_id: info.topicId + '_NEXT', topic_title: 'Next Topic in sequence', planned_periods: 2, planned_week: 2, status: 'active', status_type: 'upcoming' },
   ];
 
   const topicProgress: TopicProgress[] = [

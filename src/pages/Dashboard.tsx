@@ -23,14 +23,19 @@ function TodaySection() {
   const { teacher } = useTeacher();
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!teacher) return;
     setLoading(true);
+    setError(null);
     const today = new Date().toISOString().split('T')[0];
     getDashboard(teacher.teacher_id, today)
       .then(setDashboard)
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setError(err.message || 'Failed to fetch dashboard data');
+      })
       .finally(() => setLoading(false));
   }, [teacher?.teacher_id]);
 
@@ -72,6 +77,24 @@ function TodaySection() {
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-48 bg-white border border-slate-100 rounded-2xl shadow-sm animate-pulse" />
           ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="space-y-4">
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-8 text-center">
+          <div className="text-2xl mb-2">⚠️</div>
+          <h3 className="text-rose-800 font-bold mb-1">Dashboard Error</h3>
+          <p className="text-sm text-rose-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-rose-600 text-white text-sm font-semibold rounded-lg hover:bg-rose-700 transition-colors"
+          >
+            Retry Connection
+          </button>
         </div>
       </section>
     );

@@ -59,7 +59,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
               cta={r.has_microtest ? 'Microtest' : 'Not available'}
               disabled={!r.has_microtest}
               to={r.has_microtest 
-                ? `/microtests?class=${encodeURIComponent(r.microtest_class || '')}&subject=${encodeURIComponent(r.microtest_subject || '')}&chapter=${encodeURIComponent(r.microtest_chapter || '')}`
+                ? `/microtests?class=${encodeURIComponent(r.microtest_class || '')}&subject=${encodeURIComponent(r.microtest_subject || '')}&chapter=${encodeURIComponent(r.microtest_chapter || '')}&topic=${encodeURIComponent(r.microtest_topic || '')}`
                 : undefined
               }
             />
