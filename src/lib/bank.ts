@@ -249,7 +249,7 @@ export async function fetchQuestionBank(scope?: BankRequest): Promise<BankData> 
     return normalized;
   }
 
-  const res = await fetch('/fallback-bank.json');
+  const res = await fetch(import.meta.env.BASE_URL + 'fallback-bank.json');
   if (!res.ok) throw new Error('Failed to load local fallback question bank');
   const data = await res.json();
   return normalizeBankData(data, { source: 'fallback', reason: url ? 'Google Sheets unavailable' : 'No Google Sheets URL configured' });
