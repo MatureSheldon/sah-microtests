@@ -69,6 +69,10 @@ export async function exportDocx(questions: Question[], ctx: ExportContext) {
     const cleanQuestion = stripHtml(q.question);
     studentCopy.push(createParagraph(`${i + 1}. [${q.marks} mark${q.marks === 1 ? "" : "s"}] ${cleanQuestion}`));
 
+    if (q.imageUrl) {
+      studentCopy.push(createParagraph(`   [Attached Image: ${q.imageUrl.trim().startsWith('<svg') ? 'SVG Graphic' : q.imageUrl}]`));
+    }
+
     if (q.options) {
       studentCopy.push(createParagraph(`   A. ${stripHtml(q.options.A)}`));
       studentCopy.push(createParagraph(`   B. ${stripHtml(q.options.B)}`));
@@ -91,6 +95,9 @@ export async function exportDocx(questions: Question[], ctx: ExportContext) {
     // In our simplified Question type, answer may not be present but let's safely read it
     const ans = (q as any).answer || (q.options ? "Refer to options" : "Subjective");
     teacherCopy.push(createParagraph(`${i + 1}. ${stripHtml(ans)}`, true));
+    if (q.imageUrl) {
+      teacherCopy.push(createParagraph(`   [Attached Image: ${q.imageUrl.trim().startsWith('<svg') ? 'SVG Graphic' : q.imageUrl}]`));
+    }
     
     if ((q as any).explanation) {
       teacherCopy.push(createParagraph(`Explanation: ${stripHtml((q as any).explanation)}`));

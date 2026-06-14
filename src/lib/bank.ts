@@ -97,23 +97,57 @@ function uniqueSorted(values: string[]) {
 
 function normalizeQuestion(raw: any): Question {
   const options = raw.options || {};
-  return {
-    ...raw,
-    id: String(raw.id || raw['Question ID'] || '').trim(),
-    classLevel: normalizeClass(raw.classLevel || raw.Class || raw.class),
-    subject: normalizeSubject(raw.subject || raw.Subject),
-    chapterNumber: Number(raw.chapterNumber || raw['Chapter No.'] || raw['Chapter No'] || 0),
-    chapterName: String(raw.chapterName || raw.Chapter || raw['Chapter Name'] || '').trim(),
-    topic: String(raw.topic || raw.Topic || '').trim(),
-    questionType: String(raw.questionType || raw['Question Type'] || '').trim(),
-    difficulty: String(raw.difficulty || raw.Difficulty || 'Easy').trim() as Question['difficulty'],
-    marks: Number(raw.marks || raw.Marks || 1),
-    question: String(raw.question || raw.Question || '').trim(),
-    options: Object.keys(options).length ? options : undefined,
-    imageUrl: String(raw.imageUrl || raw['Image URL'] || '').trim(),
-    timesAsked: Number(raw.timesAsked || raw['Times Asked'] || 0),
-    useInPapers: String(raw.useInPapers || raw['Use in Papers'] || 'Yes').trim() === 'No' ? 'No' : 'Yes'
-  };
+  
+  // Dev-only debug block for the image pipeline - log first row unconditionally
+  if (raw.rowNumber === 1 || raw.id === '1' || raw['Question ID'] === '1' || !window._loggedFirstRow) {
+    if (typeof window !== 'undefined') window._loggedFirstRow = true;
+    console.log('[DEBUG] normalizeQuestion first row keys:', {
+      questionId: raw.id || raw['Question ID'],
+      rawKeys: Object.keys(raw),
+      rawObj: raw
+    });
+  }
+
+    const rawImg = String(
+      raw.imageUrl ||
+      raw.image_url ||
+      raw['Image URL'] ||
+      raw['Question Image'] ||
+      raw['Question Image URL'] ||
+      raw['Diagram'] ||
+      raw['Diagram URL'] ||
+      raw['Figure'] ||
+      raw['Image'] ||
+      raw.assetData ||
+      raw['Asset Data'] ||
+      ''
+    ).trim();
+
+    let imageUrl = rawImg;
+    if (imageUrl.includes('drive.google.com/file/d/')) {
+      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+
+    return {
+      ...raw,
+      id: String(raw.id || raw['Question ID'] || '').trim(),
+      classLevel: normalizeClass(raw.classLevel || raw.Class || raw.class),
+      subject: normalizeSubject(raw.subject || raw.Subject),
+      chapterNumber: Number(raw.chapterNumber || raw['Chapter No.'] || raw['Chapter No'] || 0),
+      chapterName: String(raw.chapterName || raw.Chapter || raw['Chapter Name'] || '').trim(),
+      topic: String(raw.topic || raw.Topic || '').trim(),
+      questionType: String(raw.questionType || raw['Question Type'] || '').trim(),
+      difficulty: String(raw.difficulty || raw.Difficulty || 'Easy').trim() as Question['difficulty'],
+      marks: Number(raw.marks || raw.Marks || 1),
+      question: String(raw.question || raw.Question || '').trim(),
+      options: Object.keys(options).length ? options : undefined,
+      imageUrl,
+      timesAsked: Number(raw.timesAsked || raw['Times Asked'] || 0),
+      useInPapers: String(raw.useInPapers || raw['Use in Papers'] || 'Yes').trim() === 'No' ? 'No' : 'Yes'
+    };
 }
 
 function normalizeChapter(raw: any) {

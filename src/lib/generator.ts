@@ -22,12 +22,23 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-function scoreCandidate(q: Question, selected: Question[], chapterTarget: number, diffTargets: Record<string, number>) {
-  const chMrks = selected.filter(i => i.chapterNumber === q.chapterNumber).reduce((s, i) => s + i.marks, 0);
-  const dfMrks = selected.filter(i => i.difficulty === q.difficulty).reduce((s, i) => s + i.marks, 0);
-  return Math.max(0, chapterTarget - chMrks) * 3 +
-    Math.max(0, (diffTargets[q.difficulty] || 0) - dfMrks) * 2 -
-    q.marks - Number(q.timesAsked || 0);
+function scoreCandidate(
+  q: Question,
+  chMrks: number,
+  dfMrks: number,
+  tpMrks: number,
+  chapterTarget: number,
+  diffTargets: Record<string, number>,
+  typeTargets: Record<string, number>
+) {
+  const chBonus = chapterTarget - chMrks;
+  const dfBonus = (diffTargets[q.difficulty] || 0) - dfMrks;
+  const tpBonus = (typeTargets[q.questionType] || 0) - tpMrks;
+
+  const chScore = chBonus > 0 ? chBonus * 3 : chBonus * 8;
+  const tpScore = tpBonus > 0 ? tpBonus * 4 : tpBonus * 10;
+  
+  return chScore + dfBonus * 2 + tpScore - q.marks - Number(q.timesAsked || 0);
 }
 
 export function generatePaper(
@@ -45,6 +56,14 @@ export function generatePaper(
     Hard: targetMarks(totalMarks, (hardPct / diffWeightSum) * 100 || 0)
   };
 
+  const typeWeightSum = selectedTypes.length;
+  const typeTargets: Record<string, number> = {};
+  if (typeWeightSum > 0) {
+    for (const t of selectedTypes) {
+      typeTargets[t] = targetMarks(totalMarks, (1 / typeWeightSum) * 100);
+    }
+  }
+
   const available = pool.filter(q => q.useInPapers === 'Yes' && selectedTypes.includes(q.questionType));
   if (available.length === 0) return [];
 
@@ -52,23 +71,47 @@ export function generatePaper(
   const selected = [...locked];
   const used = new Set(selected.map(q => q.id));
 
-  const chapterWeightSum = chapters.reduce((s, i) => s + i.target, 0);
+  const rawChapterWeightSum = chapters.reduce((s, i) => s + i.target, 0);
+  const chapterWeightSum = rawChapterWeightSum === 0 ? chapters.length : rawChapterWeightSum;
 
   for (const p of chapters) {
-    const chTarget = targetMarks(totalMarks, (p.target / chapterWeightSum) * 100 || 0);
+    const targetVal = rawChapterWeightSum === 0 ? 1 : p.target;
+    const chTarget = targetMarks(totalMarks, (targetVal / chapterWeightSum) * 100 || 0);
     let chMrks = selected.filter(q => q.chapterNumber === p.num).reduce((s, q) => s + q.marks, 0);
     const chPool = shuffle(available.filter(q => q.chapterNumber === p.num && !used.has(q.id)));
     
-    while (chMrks < chTarget && selected.reduce((s, q) => s + q.marks, 0) < totalMarks) {
-      const rem = totalMarks - selected.reduce((s, q) => s + q.marks, 0);
+    let currentTotalMarks = selected.reduce((s, q) => s + q.marks, 0);
+    while (chMrks < chTarget && currentTotalMarks < totalMarks) {
+      const rem = totalMarks - currentTotalMarks;
+      
+      const chMrksLookups: Record<number, number> = {};
+      const dfMrksLookups: Record<string, number> = {};
+      const typeMrksLookups: Record<string, number> = {};
+      for (const sq of selected) {
+        chMrksLookups[sq.chapterNumber] = (chMrksLookups[sq.chapterNumber] || 0) + sq.marks;
+        dfMrksLookups[sq.difficulty] = (dfMrksLookups[sq.difficulty] || 0) + sq.marks;
+        typeMrksLookups[sq.questionType] = (typeMrksLookups[sq.questionType] || 0) + sq.marks;
+      }
+      
+      const getScore = (q: Question) => scoreCandidate(
+        q,
+        chMrksLookups[q.chapterNumber] || 0,
+        dfMrksLookups[q.difficulty] || 0,
+        typeMrksLookups[q.questionType] || 0,
+        chTarget,
+        diffTargets,
+        typeTargets
+      );
+
       const candidates = chPool
         .filter(q => !used.has(q.id) && q.marks <= rem)
-        .sort((a, b) => scoreCandidate(b, selected, chTarget, diffTargets) - scoreCandidate(a, selected, chTarget, diffTargets));
+        .sort((a, b) => getScore(b) - getScore(a));
       if (!candidates.length) break;
       const next = candidates[0];
       selected.push(next);
       used.add(next.id);
       chMrks += next.marks;
+      currentTotalMarks += next.marks;
     }
   }
 
