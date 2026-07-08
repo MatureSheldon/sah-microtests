@@ -1,0 +1,2 @@
+event_id,academic_year,event_type,event_name,start_date,end_date,scope,class_ids,section_ids,affected_periods,is_working_day,is_instructional_day,notes,status
+AY_2026_27,2026-27,academic_year,Academic Year 2026-27,2026-04-01,2027-03-31,school,,,,TRUE,TRUE,Active academic year marker,active

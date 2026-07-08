@@ -2,6 +2,8 @@
 
 This document details the data architecture for the SAH Command Center. It uses a **Google Sheets-backed gateway** architecture, consisting of a single "Central Control" workbook and individual "Class-Subject" workbooks.
 
+For the smallest working setup, start with [Minimum Central Control Workbook](/Users/adityabhatt/Documents/sah-microtests/docs/minimum-central-control.md). That Phase 1 workbook powers Today's Schedule, current topic display, resource buttons, and Mark Done without requiring every future homework/microtest log table upfront.
+
 ## System Architecture
 
 ```mermaid

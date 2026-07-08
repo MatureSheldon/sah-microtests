@@ -1,0 +1,2 @@
+resource_id,academic_year,class_id,subject_id,chapter_id,topic_id,resource_type,title,url,resource_url,status,version,last_updated
+RES_MT_001,2026-27,CLASS_9,MATH,MATH9_CH06,MATH9_CH06_T01,microtest,Microtest: Vertically opposite angles,,,active,1,2026-07-04

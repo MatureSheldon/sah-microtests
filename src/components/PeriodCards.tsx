@@ -23,8 +23,15 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
             <span className="text-sm text-slate-500">
               {period.slot.start_time} — {period.slot.end_time}
             </span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${
+              period.pacing === 'behind' ? 'bg-rose-50 text-rose-600 border-rose-100 animate-pulse' :
+              period.pacing === 'ahead' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+              'bg-blue-50 text-blue-600 border-blue-100'
+            }`}>
+              {period.pacing === 'behind' ? 'Behind' : period.pacing === 'ahead' ? 'Ahead' : 'On Track'}
+            </span>
             {!period.is_content_available && (
-              <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded">
                 Preview Only
               </span>
             )}
@@ -40,13 +47,15 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
           <div className="grid grid-cols-4 gap-2 mt-auto">
             <ResourceTile 
               label="Plan" 
-              cta={r.has_lesson_plan ? 'Review PDF' : 'Not available'}
+              cta={r.has_lesson_plan ? 'Review LP' : 'Not available'}
               disabled={!r.has_lesson_plan}
+              to={r.has_lesson_plan ? `/chapters/${period.topic_id}?classId=${period.slot.class_id}&subjectId=${period.slot.subject_id}` : undefined}
             />
             <ResourceTile 
               label="Concept" 
               cta={r.has_concept_map ? 'Open Map' : 'Not available'}
               disabled={!r.has_concept_map}
+              to={r.has_concept_map ? `/concepts/${period.topic_id}?classId=${period.slot.class_id}&subjectId=${period.slot.subject_id}` : undefined}
             />
             <ResourceTile 
               label="Homework" 

@@ -19,6 +19,7 @@ const YearlyRoadmap = lazy(() => import('./pages/Roadmap').then((module) => ({ d
 const MicrotestBuilder = lazy(() => import('./pages/MicrotestBuilder').then((module) => ({ default: module.MicrotestBuilder })));
 const ChapterLibrary = lazy(() => import('./pages/ChapterLibrary').then((module) => ({ default: module.ChapterLibrary })));
 const LessonPlanDetail = lazy(() => import('./pages/LessonPlanDetail').then((module) => ({ default: module.LessonPlanDetail })));
+const ConceptDetail = lazy(() => import('./pages/ConceptDetail').then((module) => ({ default: module.ConceptDetail })));
 const AdminConsole = lazy(() => import('./pages/AdminConsole').then((module) => ({ default: module.AdminConsole })));
 const FullTimetable = lazy(() => import('./pages/FullTimetable').then((module) => ({ default: module.FullTimetable })));
 
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="microtests" element={<MicrotestBuilder />} />
               <Route path="chapters" element={<ChapterLibrary />} />
               <Route path="chapters/:planId" element={<LessonPlanDetail />} />
+              <Route path="concepts/:conceptId" element={<ConceptDetail />} />
               <Route path="admin" element={<AdminConsole />} />
               <Route path="timetable" element={<FullTimetable />} />
             </Route>

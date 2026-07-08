@@ -1,0 +1,3 @@
+plan_id,academic_year,class_id,subject_id,sequence_no,chapter_id,chapter_title,topic_id,topic_title,planned_periods,status
+PLAN_001,2026-27,CLASS_9,MATH,1,MATH9_CH06,Lines and Angles,MATH9_CH06_T01,Vertically opposite angles,1,active
+PLAN_002,2026-27,CLASS_9,MATH,2,MATH9_CH06,Lines and Angles,MATH9_CH06_T02,Pairs of angles,1,active

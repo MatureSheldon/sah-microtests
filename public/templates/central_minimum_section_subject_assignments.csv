@@ -1,0 +1,2 @@
+assignment_id,academic_year,class_id,section_id,subject_id,teacher_id,role,effective_from,effective_to,status
+ASSIGN_001,2026-27,CLASS_9,C,MATH,T001,primary,2026-04-01,2027-03-31,active

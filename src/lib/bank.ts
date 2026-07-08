@@ -83,7 +83,8 @@ export function clearQuestionBankCache() {
 
 function normalizeSubject(value: unknown): string {
   const subject = String(value || '').trim();
-  if (/^(maths|math)$/i.test(subject)) return 'Mathematics';
+  if (/^(maths|math|mathematics)$/i.test(subject)) return 'Mathematics';
+  if (/^(sci|science)$/i.test(subject)) return 'Science';
   return subject;
 }
 
@@ -96,13 +97,18 @@ function uniqueSorted(values: string[]) {
 }
 
 function normalizeQuestion(raw: any): Question {
-  const options = raw.options || {};
+  const options = raw.options || {
+    A: raw['Option A'] || raw['option a'] || raw.option_a || raw.optionA || '',
+    B: raw['Option B'] || raw['option b'] || raw.option_b || raw.optionB || '',
+    C: raw['Option C'] || raw['option c'] || raw.option_c || raw.optionC || '',
+    D: raw['Option D'] || raw['option d'] || raw.option_d || raw.optionD || '',
+  };
   
   // Dev-only debug block for the image pipeline - log first row unconditionally
-  if (raw.rowNumber === 1 || raw.id === '1' || raw['Question ID'] === '1' || !window._loggedFirstRow) {
+  if (raw.rowNumber === 1 || raw.id === '1' || raw['Question ID'] === '1' || raw['question id'] === '1' || !window._loggedFirstRow) {
     if (typeof window !== 'undefined') window._loggedFirstRow = true;
     console.log('[DEBUG] normalizeQuestion first row keys:', {
-      questionId: raw.id || raw['Question ID'],
+      questionId: raw.id || raw['Question ID'] || raw['question id'],
       rawKeys: Object.keys(raw),
       rawObj: raw
     });
@@ -112,6 +118,7 @@ function normalizeQuestion(raw: any): Question {
       raw.imageUrl ||
       raw.image_url ||
       raw['Image URL'] ||
+      raw['image url'] ||
       raw['Question Image'] ||
       raw['Question Image URL'] ||
       raw['Diagram'] ||
@@ -120,6 +127,7 @@ function normalizeQuestion(raw: any): Question {
       raw['Image'] ||
       raw.assetData ||
       raw['Asset Data'] ||
+      raw['asset data'] ||
       ''
     ).trim();
 
@@ -133,20 +141,27 @@ function normalizeQuestion(raw: any): Question {
 
     return {
       ...raw,
-      id: String(raw.id || raw['Question ID'] || '').trim(),
+      id: String(raw.id || raw['Question ID'] || raw['question id'] || raw.question_id || '').trim(),
       classLevel: normalizeClass(raw.classLevel || raw.Class || raw.class),
-      subject: normalizeSubject(raw.subject || raw.Subject),
-      chapterNumber: Number(raw.chapterNumber || raw['Chapter No.'] || raw['Chapter No'] || 0),
-      chapterName: String(raw.chapterName || raw.Chapter || raw['Chapter Name'] || '').trim(),
-      topic: String(raw.topic || raw.Topic || '').trim(),
-      questionType: String(raw.questionType || raw['Question Type'] || '').trim(),
-      difficulty: String(raw.difficulty || raw.Difficulty || 'Easy').trim() as Question['difficulty'],
-      marks: Number(raw.marks || raw.Marks || 1),
-      question: String(raw.question || raw.Question || '').trim(),
-      options: Object.keys(options).length ? options : undefined,
+      subject: normalizeSubject(raw.subject || raw.Subject || raw.subject),
+      chapterNumber: Number(raw.chapterNumber || raw['Chapter No.'] || raw['Chapter No'] || raw['chapter no.'] || raw.chapter_no || 0),
+      chapterName: String(raw.chapterName || raw.Chapter || raw['Chapter Name'] || raw['chapter name'] || '').trim(),
+      topic: String(raw.topic || raw.Topic || raw.topic || '').trim(),
+      questionType: String(raw.questionType || raw['Question Type'] || raw['question type'] || raw.question_type || '').trim(),
+      difficulty: String(raw.difficulty || raw.Difficulty || raw.difficulty || 'Easy').trim() as Question['difficulty'],
+      marks: Number(raw.marks || raw.Marks || raw.marks || 1),
+      question: String(raw.question || raw.Question || raw.question || '').trim(),
+      options: (options.A || options.B || options.C || options.D) ? options : undefined,
       imageUrl,
-      timesAsked: Number(raw.timesAsked || raw['Times Asked'] || 0),
-      useInPapers: String(raw.useInPapers || raw['Use in Papers'] || 'Yes').trim() === 'No' ? 'No' : 'Yes'
+      timesAsked: Number(raw.timesAsked || raw['Times Asked'] || raw['times asked'] || raw.times_asked || 0),
+      useInPapers: String(raw.useInPapers || raw['Use in Papers'] || raw['use in papers'] || raw.use_in_papers || 'Yes').trim() === 'No' ? 'No' : 'Yes',
+      
+      // Same-row assets:
+      assetFormat: String(raw.assetFormat || raw['Asset Format'] || raw['asset format'] || raw.asset_format || '').trim(),
+      assetData: String(raw.assetData || raw['Asset Data'] || raw['asset data'] || raw.asset_data || '').trim(),
+      assetPlacement: String(raw.assetPlacement || raw['Asset Placement'] || raw['asset placement'] || raw.asset_placement || '').trim(),
+      assetWidth: raw.assetWidth !== undefined ? raw.assetWidth : (raw['Asset Width'] !== undefined ? raw['Asset Width'] : (raw['asset width'] !== undefined ? raw['asset width'] : undefined)),
+      assetHeight: raw.assetHeight !== undefined ? raw.assetHeight : (raw['Asset Height'] !== undefined ? raw['Asset Height'] : (raw['asset height'] !== undefined ? raw['asset height'] : undefined)),
     };
 }
 

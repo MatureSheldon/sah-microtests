@@ -16,6 +16,8 @@ import type {
   HomeworkSet,
   HomeworkItem,
   TimetableSlot,
+  LessonPlan,
+  Concept,
 } from './models';
 
 // ── Teachers ───────────────────────────────────────────────────────────────
@@ -299,3 +301,47 @@ export function mockGetTeachingLoad(_teacherId: string): { day: string; periods:
     { day: 'Sat', periods: 2 },
   ];
 }
+
+export function mockGetLessonPlan(classId: string, subjectId: string, topicId: string): LessonPlan | null {
+  return {
+    id: `LP_${classId}_${subjectId}_${topicId}`,
+    chapterTitle: 'Lines and Angles',
+    subject: subjectId === 'MATH' ? 'Mathematics' : (subjectId === 'SCI' ? 'Science' : subjectId),
+    klass: classId.replace('CLASS_', ''),
+    duration: '2 Periods',
+    objectives: [
+      'Identify acute, obtuse, right, straight and reflex angles.',
+      'Prove and apply the Vertically Opposite Angles theorem.',
+      'Identify adjacent angles and linear pairs of angles.'
+    ],
+    phases: {
+      engage: 'Show pictures of scissors opening, railway crossings, and bridges. Ask students to spot intersecting lines and point out pairs of angles.',
+      explore: 'Distribute protractors and have students draw two intersecting lines, measure all four angles, and tabulate their findings.',
+      explain: 'Define vertically opposite angles. Prove the theorem: If two lines intersect, then the vertically opposite angles are equal. Introduce linear pairs of angles.',
+      elaborate: 'Solve standard NCERT problems involving intersecting lines where unknown angle variables must be deduced algebraically.',
+      evaluate: 'Conduct a 5-minute exit ticket with two questions: one finding a vertically opposite angle, one verifying a linear pair relationship.'
+    },
+    resources: [
+      'NCERT Class 9 Mathematics Textbook, Chapter 6',
+      'Geometry boxes (protractors, rulers)',
+      'Exit-ticket worksheets'
+    ]
+  };
+}
+
+export function mockGetConcept(classId: string, subjectId: string, topicId: string): Concept | null {
+  return {
+    id: `CON_${classId}_${subjectId}_${topicId}`,
+    title: 'Vertically Opposite & Linear Pair Angles',
+    explanation: 'When two straight lines intersect, they form four angles. The angles opposite to each other are called vertically opposite angles and are always equal. Adjacent angles that form a straight line add up to 180 degrees and are called a linear pair.',
+    key_formulas: [
+      '\\angle AOD = \\angle BOC \\quad \\text{(Vertically Opposite)}',
+      '\\angle AOC + \\angle BOC = 180^\\circ \\quad \\text{(Linear Pair)}'
+    ],
+    misconceptions: [
+      'Assuming all adjacent angles add up to 180 degrees (only true if their non-common arms form a straight line).',
+      'Thinking vertically opposite angles are only equal when the lines intersect at 90 degrees.'
+    ]
+  };
+}
+

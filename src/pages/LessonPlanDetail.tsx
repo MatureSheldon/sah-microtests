@@ -1,9 +1,49 @@
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { getLessonPlan } from '../lib/gateway';
 import { MOCK_LESSON_PLANS } from '../lib/data';
+import type { LessonPlan } from '../lib/models';
 
 export function LessonPlanDetail() {
   const { planId } = useParams();
-  const plan = MOCK_LESSON_PLANS[planId || ''];
+  const [searchParams] = useSearchParams();
+  const classId = searchParams.get('classId') || 'CLASS_9';
+  const subjectId = searchParams.get('subjectId') || 'MATH';
+
+  const [plan, setPlan] = useState<LessonPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPlan() {
+      try {
+        setLoading(true);
+        const livePlan = await getLessonPlan(classId, subjectId, planId || '');
+        if (livePlan) {
+          setPlan(livePlan);
+        } else {
+          // Fallback to offline mock data
+          const fallback = MOCK_LESSON_PLANS[planId || ''];
+          setPlan(fallback || null);
+        }
+      } catch (err) {
+        console.error("Failed to load lesson plan:", err);
+        const fallback = MOCK_LESSON_PLANS[planId || ''];
+        setPlan(fallback || null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPlan();
+  }, [classId, subjectId, planId]);
+
+  if (loading) {
+    return (
+      <div className="p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">Loading instructional plan...</p>
+      </div>
+    );
+  }
 
   if (!plan) {
     return (
@@ -24,8 +64,8 @@ export function LessonPlanDetail() {
     <div className="max-w-[1000px] w-full p-4 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 mx-auto">
       {/* Header */}
       <header className="mb-8 print:hidden">
-        <Link to="/chapters" className="text-sm font-semibold text-brand-accent hover:underline flex items-center gap-1 mb-6 inline-flex">
-          &larr; Back to Library
+        <Link to="/" className="text-sm font-semibold text-brand-accent hover:underline flex items-center gap-1 mb-6 inline-flex">
+          &larr; Back to Dashboard
         </Link>
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
@@ -40,8 +80,10 @@ export function LessonPlanDetail() {
                 {plan.duration}
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">{plan.chapterTitle}</h1>
-            <p className="text-slate-500 mt-2">5E Instructional Lesson Plan</p>
+            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">
+              {plan.chapterTitle ? `${plan.chapterTitle}` : 'Lines and Angles'}
+            </h1>
+            <p className="text-slate-500 mt-2">Topic ID: <span className="font-mono text-brand-accent">{planId}</span></p>
           </div>
           <button 
             onClick={handlePrint}
@@ -53,9 +95,9 @@ export function LessonPlanDetail() {
       </header>
 
       {/* Printable Area */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 print:shadow-none print:border-none print:p-0">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 print:shadow-none print:border-none print:p-0 animate-in fade-in duration-300">
         <div className="hidden print:block mb-8 border-b-2 border-slate-800 pb-4">
-          <h1 className="text-3xl font-bold text-slate-800">{plan.chapterTitle}</h1>
+          <h1 className="text-3xl font-bold text-slate-800">{plan.chapterTitle || 'Lesson Plan'}</h1>
           <p className="text-sm text-slate-600 font-medium mt-1">
             Class {plan.klass} • {plan.subject} • {plan.duration}
           </p>

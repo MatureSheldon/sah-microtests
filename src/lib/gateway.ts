@@ -11,6 +11,8 @@ import type {
   HomeworkSet,
   HomeworkItem,
   MarkDonePayload,
+  LessonPlan,
+  Concept,
 } from './models';
 
 import {
@@ -20,6 +22,8 @@ import {
   mockGetHomework,
   mockGetTeacherClasses,
   mockGetTeachingLoad,
+  mockGetLessonPlan,
+  mockGetConcept,
 } from './gateway-mock';
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -134,9 +138,15 @@ export async function getHomework(
   if (!isLive()) {
     return mockGetHomework(classId, subjectId, topicId);
   }
-  const data = await gatewayGet<{ set: HomeworkSet; items: HomeworkItem[] } | null>(
+  const data = await gatewayGet<any>(
     'getHomework', { class_id: classId, subject_id: subjectId, topic_id: topicId }
   );
+  if (!data || !data.set) {
+    if (data && data.warnings) {
+      console.warn("getHomework warnings:", data.warnings);
+    }
+    return null;
+  }
   return data;
 }
 
@@ -191,8 +201,67 @@ export async function getTeachingLoad(teacherId: string): Promise<{ day: string;
 }
 
 /**
+ * Returns lesson plan details for a specific class/subject/topic.
+ */
+export async function getLessonPlan(
+  classId: string, subjectId: string, topicId: string
+): Promise<LessonPlan | null> {
+  const cacheKey = `lesson:${classId}:${subjectId}:${topicId}`;
+  const cached = getCached<LessonPlan>(cacheKey);
+  if (cached) return cached;
+
+  if (!isLive()) {
+    const data = mockGetLessonPlan(classId, subjectId, topicId);
+    setCache(cacheKey, data);
+    return data;
+  }
+
+  const data = await gatewayGet<any>(
+    'getLessonPlan', { class_id: classId, subject_id: subjectId, topic_id: topicId }
+  );
+  if (!data || !data.plan) {
+    if (data && data.warnings) {
+      console.warn("getLessonPlan warnings:", data.warnings);
+    }
+    return null;
+  }
+  setCache(cacheKey, data.plan);
+  return data.plan;
+}
+
+/**
+ * Returns key concept notes and visuals for a specific class/subject/topic.
+ */
+export async function getConcept(
+  classId: string, subjectId: string, topicId: string
+): Promise<Concept | null> {
+  const cacheKey = `concept:${classId}:${subjectId}:${topicId}`;
+  const cached = getCached<Concept>(cacheKey);
+  if (cached) return cached;
+
+  if (!isLive()) {
+    const data = mockGetConcept(classId, subjectId, topicId);
+    setCache(cacheKey, data);
+    return data;
+  }
+
+  const data = await gatewayGet<any>(
+    'getConcept', { class_id: classId, subject_id: subjectId, topic_id: topicId }
+  );
+  if (!data || !data.concept) {
+    if (data && data.warnings) {
+      console.warn("getConcept warnings:", data.warnings);
+    }
+    return null;
+  }
+  setCache(cacheKey, data.concept);
+  return data.concept;
+}
+
+/**
  * Clears the gateway session cache (for use after write operations).
  */
 export function clearGatewayCache() {
   cache.clear();
 }
+

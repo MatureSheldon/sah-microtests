@@ -365,3 +365,123 @@ def sort_questions(rows: list[QuestionRow]) -> list[QuestionRow]:
         )
 
     return sorted(rows, key=key)
+
+
+# --- Schemas for Dynamic Courseware Sheets ---
+
+CHAPTER_MAP_HEADERS: list[str] = ["chapter_id", "chapter_no", "chapter_title", "default_priority", "status"]
+TOPIC_MAP_HEADERS: list[str] = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
+LESSON_PLANS_HEADERS: list[str] = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
+CONCEPTS_HEADERS: list[str] = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
+HOMEWORK_HEADERS: list[str] = ["homework_id", "chapter_id", "topic_id", "set_title", "sequence_no", "question_text", "marks", "difficulty", "answer", "explanation", "status"]
+RESOURCES_HEADERS: list[str] = ["resource_id", "chapter_id", "topic_id", "resource_type", "title", "url", "description", "status"]
+
+
+class ChapterMapRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    chapter_no: int = Field(alias="chapter_no", ge=1)
+    chapter_title: str = Field(alias="chapter_title", min_length=1)
+    default_priority: int = Field(alias="default_priority", ge=1, le=5, default=3)
+    status: str = Field(alias="status", default="active")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [self.chapter_id, self.chapter_no, self.chapter_title, self.default_priority, self.status]
+
+
+class TopicMapRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    topic_id: str = Field(alias="topic_id", min_length=1)
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    sequence_no: int = Field(alias="sequence_no", ge=1)
+    topic_title: str = Field(alias="topic_title", min_length=1)
+    relative_weight: float = Field(alias="relative_weight", ge=0.0, default=1.0)
+    relative_difficulty: str = Field(alias="relative_difficulty", default="Medium")
+    learning_outcomes: str = Field(alias="learning_outcomes", default="")
+    status: str = Field(alias="status", default="active")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [self.topic_id, self.chapter_id, self.sequence_no, self.topic_title, self.relative_weight, self.relative_difficulty, self.learning_outcomes, self.status]
+
+
+class LessonPlanRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    lesson_plan_id: str = Field(alias="lesson_plan_id", min_length=1)
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    topic_id: str = Field(alias="topic_id", min_length=1)
+    objectives: str = Field(alias="objectives") # Semicolon separated
+    phase_engage: str = Field(alias="phase_engage")
+    phase_explore: str = Field(alias="phase_explore")
+    phase_explain: str = Field(alias="phase_explain")
+    phase_elaborate: str = Field(alias="phase_elaborate")
+    phase_evaluate: str = Field(alias="phase_evaluate")
+    required_resources: str = Field(alias="required_resources") # Semicolon separated
+    notes: str = Field(alias="notes", default="")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [
+            self.lesson_plan_id, self.chapter_id, self.topic_id, self.objectives,
+            self.phase_engage, self.phase_explore, self.phase_explain,
+            self.phase_elaborate, self.phase_evaluate, self.required_resources, self.notes
+        ]
+
+
+class ConceptRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    concept_id: str = Field(alias="concept_id", min_length=1)
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    topic_id: str = Field(alias="topic_id", min_length=1)
+    concept_title: str = Field(alias="concept_title", min_length=1)
+    explanation: str = Field(alias="explanation")
+    key_formulas: str = Field(alias="key_formulas", default="") # Semicolon separated
+    misconceptions: str = Field(alias="misconceptions", default="") # Semicolon separated
+    visual_type: str = Field(alias="visual_type", default="")
+    visual_data: str = Field(alias="visual_data", default="")
+    notes: str = Field(alias="notes", default="")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [
+            self.concept_id, self.chapter_id, self.topic_id, self.concept_title,
+            self.explanation, self.key_formulas, self.misconceptions,
+            self.visual_type, self.visual_data, self.notes
+        ]
+
+
+class HomeworkRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    homework_id: str = Field(alias="homework_id", min_length=1)
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    topic_id: str = Field(alias="topic_id", min_length=1)
+    set_title: str = Field(alias="set_title", min_length=1)
+    sequence_no: int = Field(alias="sequence_no", ge=1)
+    question_text: str = Field(alias="question_text", min_length=1)
+    marks: int = Field(alias="marks", ge=1)
+    difficulty: str = Field(alias="difficulty", default="Medium")
+    answer: str = Field(alias="answer")
+    explanation: str = Field(alias="explanation")
+    status: str = Field(alias="status", default="active")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [
+            self.homework_id, self.chapter_id, self.topic_id, self.set_title, self.sequence_no,
+            self.question_text, self.marks, self.difficulty, self.answer, self.explanation, self.status
+        ]
+
+
+class ResourceRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    resource_id: str = Field(alias="resource_id", min_length=1)
+    chapter_id: str = Field(alias="chapter_id", min_length=1)
+    topic_id: str = Field(alias="topic_id", min_length=1)
+    resource_type: str = Field(alias="resource_type", min_length=1) # e.g. smart_board, video, interactive
+    title: str = Field(alias="title", min_length=1)
+    url: str = Field(alias="url")
+    description: str = Field(alias="description", default="")
+    status: str = Field(alias="status", default="active")
+
+    def to_sheet_row(self) -> list[Any]:
+        return [
+            self.resource_id, self.chapter_id, self.topic_id, self.resource_type,
+            self.title, self.url, self.description, self.status
+        ]
+

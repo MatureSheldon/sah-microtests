@@ -1,0 +1,4 @@
+subject_id,subject_name,subject_code,status
+MATH,Mathematics,MATH,active
+SCI,Science,SCI,active
+ENG,English,ENG,active

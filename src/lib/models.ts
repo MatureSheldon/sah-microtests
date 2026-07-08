@@ -361,3 +361,33 @@ export interface PeriodContext {
   topic_progress: TopicProgress[];
   resources: ResourceRegistryItem[];
 }
+
+export interface LessonPlan {
+  id: string;
+  chapterTitle: string;
+  subject: string;
+  klass: string;
+  duration: string;
+  objectives: string[];
+  phases: {
+    engage: string;
+    explore: string;
+    explain: string;
+    elaborate: string;
+    evaluate: string;
+  };
+  resources: string[];
+  notes?: string;
+}
+
+export interface Concept {
+  id: string;
+  title: string;
+  explanation: string;
+  key_formulas: string[];
+  misconceptions: string[];
+  visual_type?: string;
+  visual_data?: string;
+  notes?: string;
+}
+

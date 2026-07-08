@@ -7,7 +7,12 @@ export function useMicrotestState() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const initialClass = searchParams.get('class') || '9';
-  const normalizeSubject = (value: string) => /^(maths|math)$/i.test(String(value || '').trim()) ? 'Mathematics' : String(value || '').trim();
+  const normalizeSubject = (value: string) => {
+    const clean = String(value || '').trim();
+    if (/^(maths|math|mathematics)$/i.test(clean)) return 'Mathematics';
+    if (/^(sci|science)$/i.test(clean)) return 'Science';
+    return clean;
+  };
   const initialSubject = normalizeSubject(searchParams.get('subject') || 'Mathematics');
   const initialChapter = searchParams.get('chapter') || '';
   const initialChapterNumber = Number(initialChapter.match(/\d+/)?.[0] || 1);
