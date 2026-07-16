@@ -1,0 +1,4 @@
+academic_year,class_id,subject_id,spreadsheet_id,spreadsheet_name,status
+2026-27,CLASS_8,SCI,PASTE_CLASS8_SCIENCE_SPREADSHEET_ID_HERE,Class 8 Science Workbook,active
+2026-27,CLASS_9,MATH,PASTE_CLASS9_MATH_SPREADSHEET_ID_HERE,Class 9 Mathematics Workbook,active
+2026-27,CLASS_9,SCI,PASTE_CLASS9_SCIENCE_SPREADSHEET_ID_HERE,Class 9 Science Workbook,active

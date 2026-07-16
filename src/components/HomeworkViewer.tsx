@@ -1,36 +1,40 @@
 import { useState, useEffect } from 'react';
 import { getHomework } from '../lib/gateway';
-import type { DashboardPeriod, HomeworkSet, HomeworkItem } from '../lib/models';
+import type { HomeworkSet, HomeworkItem } from '../lib/models';
 import { renderMarkdownToHtml } from '../lib/utils';
 
-export function HomeworkViewer({ period, onClose }: { period: DashboardPeriod; onClose: () => void }) {
+interface Props {
+  classId: string;
+  subjectId: string;
+  topicId: string;
+  topicTitle: string;
+  onClose: () => void;
+}
+
+export function HomeworkViewer({ classId, subjectId, topicId, topicTitle, onClose }: Props) {
   const [data, setData] = useState<{ set: HomeworkSet; items: HomeworkItem[] } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!period.resources.has_homework) {
-      setLoading(false);
-      return;
-    }
-    
-    getHomework(period.slot.class_id, period.slot.subject_id, period.topic_id)
+    getHomework(classId, subjectId, topicId)
       .then(res => setData(res))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [classId, subjectId, topicId]);
 
   const handleAssign = () => {
-    alert("Homework assigned to " + period.class_label + "-" + period.section_label);
+    alert("Homework assignment dispatched!");
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/60 backdrop-blur-sm sm:p-4">
-      <div className="w-full h-full sm:w-[600px] sm:max-h-full sm:rounded-2xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative w-full h-full sm:w-[600px] sm:max-h-full sm:rounded-2xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
           <div>
             <h2 className="text-lg font-bold text-slate-800">Homework Set</h2>
-            <p className="text-sm text-slate-500">{period.subject_name}: {period.topic_title}</p>
+            <p className="text-sm text-slate-500">{topicTitle}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 rounded-lg p-2 hover:bg-slate-200 transition-colors">
             ✕
@@ -85,7 +89,7 @@ export function HomeworkViewer({ period, onClose }: { period: DashboardPeriod; o
               onClick={handleAssign}
               className="w-full py-3 bg-brand-primary text-white font-semibold rounded-xl hover:bg-slate-800 shadow-sm transition-colors"
             >
-              Assign to Class {period.class_label}-{period.section_label}
+              Assign Homework
             </button>
           </div>
         )}

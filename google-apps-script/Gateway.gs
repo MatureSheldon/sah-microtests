@@ -86,14 +86,26 @@ function handleRequest(e, method) {
       case 'getConcept':
         result = getConcept(params.class_id, params.subject_id, params.topic_id);
         break;
+      case 'getChapterConcepts':
+        result = getChapterConcepts(params.class_id, params.subject_id, params.chapter_id);
+        break;
       case 'markPeriodDone':
         result = markPeriodDone(params);
+        break;
+      case 'saveRoadmapPlan':
+        result = saveRoadmapPlan(params.class_id, params.subject_id, params.plan_data);
         break;
       case 'getTeacherClasses':
         result = getTeacherClasses(params.teacher_id);
         break;
+      case 'getTeacherAssignments':
+        result = getTeacherAssignments(params.teacher_id);
+        break;
       case 'getTeachingLoad':
         result = getTeachingLoad(params.teacher_id);
+        break;
+      case 'getSubjectOutline':
+        result = getSubjectOutline(params.class_id, params.subject_id);
         break;
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -348,6 +360,33 @@ function getTeacherClasses(teacher_id) {
     )
     .map(r => `Class ${r.class_id.replace('CLASS_', '')}-${r.section_id} · ${r.subject_id}`);
   return Array.from(new Set(classes));
+}
+
+function getTeacherAssignments(teacher_id) {
+  const academic_year = getActiveAcademicYear();
+  const sheet = getCentralSheet('section_subject_assignments');
+  const rows = getRows(sheet);
+  const seen = new Set();
+  const assignments = [];
+  rows
+    .filter(r =>
+      r.teacher_id === teacher_id &&
+      String(r.status || '').trim().toLowerCase() === 'active' &&
+      String(r.academic_year || '').trim() === academic_year
+    )
+    .forEach(r => {
+      const key = r.class_id + '|' + r.subject_id;
+      if (!seen.has(key)) {
+        seen.add(key);
+        assignments.push({
+          class_id: r.class_id,
+          class_label: r.class_id.replace('CLASS_', ''),
+          subject_id: r.subject_id
+        });
+      }
+    });
+  assignments.sort((a, b) => Number(a.class_label) - Number(b.class_label) || a.subject_id.localeCompare(b.subject_id));
+  return assignments;
 }
 
 function getTeachingLoad(teacher_id) {
@@ -665,7 +704,12 @@ function getHomework(class_id, subject_id, topic_id) {
   }
   const rows = getRows(sheet);
   const activeItems = rows
-    .filter(r => r.topic_id === topic_id && String(r.status || '').trim().toLowerCase() === 'active')
+    .filter(r => {
+      const rowTopic = String(r.topic_id || '').trim();
+      const status = String(r.status || '').trim().toLowerCase();
+      const isActive = status === '' || status === 'active';
+      return rowTopic === String(topic_id).trim() && isActive;
+    })
     .sort((a, b) => Number(a.sequence_no || 0) - Number(b.sequence_no || 0));
 
   if (activeItems.length === 0) {
@@ -698,7 +742,11 @@ function getHomework(class_id, subject_id, topic_id) {
 }
 
 function getBank(class_id, subject_id) {
-  // Normalize parameters
+  const academic_year = getActiveAcademicYear();
+  const registrySheet = getCentralSheet('app_registry');
+  let activeRegistry = getRows(registrySheet).filter(r => String(r.status||'').trim().toLowerCase() === 'active' && String(r.academic_year||'').trim() === academic_year);
+
+  // Normalize parameters if provided
   let resolvedClassId = class_id;
   if (resolvedClassId && resolvedClassId.indexOf("CLASS_") === -1) {
     resolvedClassId = "CLASS_" + resolvedClassId;
@@ -711,31 +759,49 @@ function getBank(class_id, subject_id) {
     else if (sUpper === 'ENGLISH' || sUpper === 'ENG') resolvedSubjectId = 'ENG';
   }
 
-  const qSheet = getSubjectSheet(resolvedClassId, resolvedSubjectId, 'Questions');
-  const chSheet = getSubjectSheet(resolvedClassId, resolvedSubjectId, 'Chapter_Map');
-
-  if (!qSheet) {
-    return {
-      ok: true,
-      questions: [],
-      chapters: [],
-      warnings: ["Questions sheet not found in subject workbook for " + (resolvedClassId || '') + " " + (resolvedSubjectId || '')]
-    };
+  // Filter registry if specific class/subject requested
+  if (resolvedClassId) {
+    activeRegistry = activeRegistry.filter(r => r.class_id === resolvedClassId);
+  }
+  if (resolvedSubjectId) {
+    activeRegistry = activeRegistry.filter(r => r.subject_id === resolvedSubjectId);
   }
 
-  const questions = getRows(qSheet);
-  const chapters = chSheet ? getRows(chSheet).map(ch => ({
-    classLevel: resolvedClassId.replace('CLASS_', ''),
-    subject: resolvedSubjectId,
-    chapterNumber: Number(ch.chapter_no || 0),
-    chapterName: ch.chapter_title || '',
-    section: ''
-  })) : [];
+  let allQuestions = [];
+  let allChapters = [];
+  let warnings = [];
+
+  if (activeRegistry.length === 0) {
+    warnings.push("No active subject workbooks found in app_registry for the requested class/subject.");
+  }
+
+  activeRegistry.forEach(reg => {
+    const qSheet = getSubjectSheet(reg.class_id, reg.subject_id, 'Questions');
+    const chSheet = getSubjectSheet(reg.class_id, reg.subject_id, 'Chapter_Map');
+
+    if (!qSheet) {
+      warnings.push("Questions sheet not found for " + reg.class_id + " " + reg.subject_id);
+    } else {
+      allQuestions = allQuestions.concat(getRows(qSheet));
+    }
+
+    if (chSheet) {
+      const chRows = getRows(chSheet).map(ch => ({
+        classLevel: reg.class_id.replace('CLASS_', ''),
+        subject: reg.subject_id,
+        chapterNumber: Number(ch.chapter_no || 0),
+        chapterName: ch.chapter_title || '',
+        section: ''
+      }));
+      allChapters = allChapters.concat(chRows);
+    }
+  });
 
   return {
     ok: true,
-    questions: questions,
-    chapters: chapters
+    questions: allQuestions,
+    chapters: allChapters,
+    warnings: warnings.length > 0 ? warnings : undefined
   };
 }
 
@@ -761,7 +827,7 @@ function getLessonPlan(class_id, subject_id, topic_id) {
     ok: true,
     plan: {
       id: plan.lesson_plan_id,
-      chapterTitle: plan.chapter_title || '',
+      chapterTitle: plan.chapter_title || plan.topic_title || '',
       subject: subject_id,
       klass: class_id.replace('CLASS_', ''),
       duration: plan.duration || '1 Period',
@@ -779,6 +845,26 @@ function getLessonPlan(class_id, subject_id, topic_id) {
   };
 }
 
+function splitListField_(value) {
+  const text = String(value || '').trim();
+  if (!text) return [];
+
+  // Prefer explicit line/list separators for prose-heavy fields. Semicolons
+  // often appear inside complete explanatory sentences, so they are only a
+  // fallback for older generated rows that used semicolon-separated lists.
+  const lineParts = text
+    .split(/\r?\n+/)
+    .map(s => s.replace(/^\s*[-*•]\s*/, '').trim())
+    .filter(s => s.length > 0);
+
+  if (lineParts.length > 1) return lineParts;
+
+  return text
+    .split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
 function getConcept(class_id, subject_id, topic_id) {
   const sheet = getSubjectSheet(class_id, subject_id, 'Concepts');
   if (!sheet) {
@@ -794,8 +880,8 @@ function getConcept(class_id, subject_id, topic_id) {
     return { ok: true, concept: null };
   }
 
-  const key_formulas = concept.key_formulas ? concept.key_formulas.split(';').map(s => s.trim()).filter(s => s.length > 0) : [];
-  const misconceptions = concept.misconceptions ? concept.misconceptions.split(';').map(s => s.trim()).filter(s => s.length > 0) : [];
+  const key_formulas = splitListField_(concept.key_formulas);
+  const misconceptions = splitListField_(concept.misconceptions);
 
   return {
     ok: true,
@@ -809,6 +895,145 @@ function getConcept(class_id, subject_id, topic_id) {
       visual_data: concept.visual_data || '',
       notes: concept.notes || ''
     }
+  };
+}
+
+function getChapterConcepts(class_id, subject_id, chapter_id) {
+  const sheet = getSubjectSheet(class_id, subject_id, 'Concepts');
+  if (!sheet) {
+    return {
+      ok: true,
+      warnings: ["Concepts sheet not found in subject workbook for " + class_id + " " + subject_id],
+      concepts: []
+    };
+  }
+  const rows = getRows(sheet);
+  // Match any topic_id that starts with the chapter_id
+  const chapterConcepts = rows.filter(r => (r.topic_id || '').startsWith(chapter_id));
+
+  return {
+    ok: true,
+    concepts: chapterConcepts.map(concept => {
+      const key_formulas = splitListField_(concept.key_formulas);
+      const misconceptions = splitListField_(concept.misconceptions);
+      return {
+        id: concept.concept_id,
+        topic_id: concept.topic_id,
+        title: concept.concept_title,
+        explanation: concept.explanation || '',
+        visual_type: concept.visual_type || '',
+        visual_data: concept.visual_data || '',
+        key_formulas: key_formulas,
+        misconceptions: misconceptions,
+        notes: concept.notes || ''
+      };
+    })
+  };
+}
+
+function saveRoadmapPlan(class_id, subject_id, plan_data) {
+  // plan_data is expected to be an object mapping topic_id to planned_periods
+  // e.g. { "SCI8_CH01_T01": 2.5, "SCI8_CH01_T02": 1.5 }
+  const curSheet = getSubjectSheet(class_id, subject_id, 'Curriculum');
+  if (!curSheet) {
+    return { ok: false, error: "Curriculum sheet not found" };
+  }
+
+  const headers = curSheet.getRange(1, 1, 1, curSheet.getLastColumn()).getValues()[0];
+  const ppColIndex = headers.findIndex(h => h.toString().toLowerCase().replace(/\s+/g, '_') === 'planned_periods') + 1;
+  const tidColIndex = headers.findIndex(h => h.toString().toLowerCase().replace(/\s+/g, '_') === 'topic_id') + 1;
+
+  if (ppColIndex === 0 || tidColIndex === 0) {
+    return { ok: false, error: "Required columns missing in Curriculum sheet" };
+  }
+
+  const data = curSheet.getDataRange().getValues();
+  // Start from row 2
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const topicId = row[tidColIndex - 1];
+    if (topicId && plan_data[topicId] !== undefined) {
+      // Round to 1 decimal place max
+      const newPeriods = Math.round(plan_data[topicId] * 10) / 10;
+      // Write back to sheet (row i+1, column ppColIndex)
+      curSheet.getRange(i + 1, ppColIndex).setValue(newPeriods);
+    }
+  }
+
+  return { ok: true };
+}
+
+function getSubjectOutline(class_id, subject_id) {
+  // Normalize class_id
+  let resolvedClassId = class_id;
+  if (resolvedClassId && resolvedClassId.indexOf('CLASS_') === -1) {
+    resolvedClassId = 'CLASS_' + resolvedClassId;
+  }
+  let resolvedSubjectId = subject_id;
+  if (resolvedSubjectId) {
+    const sUpper = resolvedSubjectId.trim().toUpperCase();
+    if (sUpper === 'MATHEMATICS' || sUpper === 'MATHS' || sUpper === 'MATH') resolvedSubjectId = 'MATH';
+    else if (sUpper === 'SCIENCE' || sUpper === 'SCI') resolvedSubjectId = 'SCI';
+    else if (sUpper === 'ENGLISH' || sUpper === 'ENG') resolvedSubjectId = 'ENG';
+  }
+
+  const data = getCachedSubjectData(resolvedClassId, resolvedSubjectId);
+  const chapters = data.chapters;
+  const topics = data.topics;
+  const lessonPlans = data.lessonPlans;
+  const concepts = data.concepts;
+  const homework = data.homework;
+
+  if (chapters.length === 0) {
+    return {
+      ok: true,
+      class_id: resolvedClassId,
+      subject_id: resolvedSubjectId,
+      chapters: [],
+      warnings: ['Chapter_Map sheet not found or empty for ' + resolvedClassId + ' ' + resolvedSubjectId]
+    };
+  }
+
+  const lessonPlanTopicIds = new Set(lessonPlans.map(r => r.topic_id));
+  const conceptTopicIds = new Set(concepts.map(r => r.topic_id));
+  const homeworkTopicIds = new Set(homework.map(r => r.topic_id));
+
+  // Group topics by chapter_id
+  const topicsByChapter = {};
+  topics.forEach(t => {
+    const cid = t.chapter_id || '';
+    if (!topicsByChapter[cid]) topicsByChapter[cid] = [];
+    topicsByChapter[cid].push({
+      topic_id: t.topic_id || '',
+      topic_title: t.topic_title || '',
+      sequence_no: Number(t.sequence_no || 0),
+      planned_periods: Number(t.planned_periods || 1),
+      has_lesson_plan: lessonPlanTopicIds.has(t.topic_id),
+      has_concept: conceptTopicIds.has(t.topic_id),
+      has_homework: homeworkTopicIds.has(t.topic_id),
+      has_microtest: lessonPlanTopicIds.has(t.topic_id) || conceptTopicIds.has(t.topic_id)
+    });
+  });
+
+  // Sort topics within each chapter
+  Object.values(topicsByChapter).forEach(arr => arr.sort((a, b) => a.sequence_no - b.sequence_no));
+
+  const outline = chapters
+    .slice()
+    .sort((a, b) => Number(a.chapter_no || 0) - Number(b.chapter_no || 0))
+    .map(ch => ({
+      chapter_id: ch.chapter_id || '',
+      chapter_no: Number(ch.chapter_no || 0),
+      chapter_title: ch.chapter_title || '',
+      total_periods: Number(ch.total_periods || 0),
+      topics: topicsByChapter[ch.chapter_id] || []
+    }));
+
+  return {
+    ok: true,
+    class_id: resolvedClassId,
+    subject_id: resolvedSubjectId,
+    chapters: outline
   };
 }
 

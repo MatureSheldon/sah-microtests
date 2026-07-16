@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getLessonPlan } from '../lib/gateway';
 import { MOCK_LESSON_PLANS } from '../lib/data';
 import type { LessonPlan } from '../lib/models';
@@ -7,6 +7,7 @@ import type { LessonPlan } from '../lib/models';
 export function LessonPlanDetail() {
   const { planId } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const classId = searchParams.get('classId') || 'CLASS_9';
   const subjectId = searchParams.get('subjectId') || 'MATH';
 
@@ -49,9 +50,9 @@ export function LessonPlanDetail() {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-bold text-slate-800">Plan not found</h2>
-        <Link to="/chapters" className="text-brand-accent hover:underline mt-2 inline-block">
-          &larr; Back to Library
-        </Link>
+        <button onClick={() => navigate(-1)} className="text-brand-accent hover:underline mt-2 inline-block">
+          &larr; Back
+        </button>
       </div>
     );
   }
@@ -64,9 +65,9 @@ export function LessonPlanDetail() {
     <div className="max-w-[1000px] w-full p-4 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 mx-auto">
       {/* Header */}
       <header className="mb-8 print:hidden">
-        <Link to="/" className="text-sm font-semibold text-brand-accent hover:underline flex items-center gap-1 mb-6 inline-flex">
-          &larr; Back to Dashboard
-        </Link>
+        <button onClick={() => navigate(-1)} className="text-sm font-semibold text-brand-accent hover:underline flex items-center gap-1 mb-6 inline-flex">
+          &larr; Back
+        </button>
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -81,7 +82,7 @@ export function LessonPlanDetail() {
               </span>
             </div>
             <h1 className="text-4xl font-bold text-slate-800 tracking-tight">
-              {plan.chapterTitle ? `${plan.chapterTitle}` : 'Lines and Angles'}
+              {plan.chapterTitle ? `${plan.chapterTitle}` : 'Lesson Plan'}
             </h1>
             <p className="text-slate-500 mt-2">Topic ID: <span className="font-mono text-brand-accent">{planId}</span></p>
           </div>

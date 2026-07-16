@@ -382,6 +382,7 @@ export interface LessonPlan {
 
 export interface Concept {
   id: string;
+  topic_id?: string;
   title: string;
   explanation: string;
   key_formulas: string[];
@@ -391,3 +392,41 @@ export interface Concept {
   notes?: string;
 }
 
+// ── Library / Browse Types ───────────────────────────────────────
+
+/** A single topic row in the subject outline with resource flags. */
+export interface SubjectOutlineTopic {
+  topic_id: string;
+  topic_title: string;
+  sequence_no: number;
+  planned_periods: number;
+  has_lesson_plan: boolean;
+  has_concept: boolean;
+  has_homework: boolean;
+  has_microtest: boolean;
+}
+
+/** A chapter with its topics in the subject outline. */
+export interface SubjectOutlineChapter {
+  chapter_id: string;
+  chapter_no: number;
+  chapter_title: string;
+  total_periods: number;
+  topics: SubjectOutlineTopic[];
+}
+
+/** Full subject outline returned by getSubjectOutline. */
+export interface SubjectOutline {
+  ok: boolean;
+  class_id: string;
+  subject_id: string;
+  chapters: SubjectOutlineChapter[];
+  warnings?: string[];
+}
+
+/** A single class+subject combo a teacher is assigned to. */
+export interface TeacherAssignment {
+  class_id: string;    // e.g. "CLASS_9"
+  class_label: string; // e.g. "9"
+  subject_id: string;  // e.g. "MATH"
+}

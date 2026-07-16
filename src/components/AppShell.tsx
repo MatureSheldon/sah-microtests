@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { InstallPrompt } from './InstallPrompt';
 import { useState } from 'react';
 
 import { Suspense } from 'react';
@@ -36,10 +37,13 @@ export function AppShell() {
         </div>
         <div className="p-4 md:p-8 space-y-10 max-w-[1400px] w-full print:p-0 print:space-y-0 print:block mx-auto">
           <Suspense fallback={<RouteFallback />}>
-            <Outlet />
+            <div>
+              <Outlet />
+            </div>
           </Suspense>
         </div>
       </main>
+      <InstallPrompt />
     </div>
   );
 }

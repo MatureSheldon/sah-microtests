@@ -1,6 +1,7 @@
 import React from 'react';
 import { renderMarkdownToHtml } from '../../lib/utils';
 import { Question } from '../../lib/bank';
+import { MermaidDiagram } from '../MermaidDiagram';
 
 interface Props {
   state: any;
@@ -141,6 +142,10 @@ export function QuestionPreviewPanel({ state, filtering }: Props) {
                             className="max-h-72 max-w-full rounded-lg border flex items-center justify-center p-4 bg-white [&>svg]:max-h-64 [&>svg]:w-auto"
                             dangerouslySetInnerHTML={{ __html: q.imageUrl }}
                           />
+                        ) : q.imageUrl.trim().match(/^(flowchart|graph|pie|sequenceDiagram|stateDiagram|classDiagram|erDiagram|gantt|journey|gitGraph|mindmap|timeline)/i) ? (
+                          <div className="rounded-lg border bg-white p-4">
+                            <MermaidDiagram chart={q.imageUrl} />
+                          </div>
                         ) : (
                           <img
                             src={q.imageUrl}
@@ -153,7 +158,8 @@ export function QuestionPreviewPanel({ state, filtering }: Props) {
                           />
                         )}
                         <div className="mt-1 text-xs text-slate-500 truncate">
-                          {q.imageUrl.trim().startsWith('<svg') ? 'Raw SVG Image' : `Image: ${q.imageUrl}`}
+                          {q.imageUrl.trim().startsWith('<svg') ? 'Raw SVG Image' : 
+                           q.imageUrl.trim().match(/^(flowchart|graph|pie|sequenceDiagram)/i) ? 'Mermaid Diagram' : `Image: ${q.imageUrl}`}
                         </div>
                       </div>
                     )}

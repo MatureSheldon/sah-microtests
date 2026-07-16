@@ -24,7 +24,11 @@ CHAPTER_MAP_HEADERS = ["chapter_id", "chapter_no", "chapter_title", "default_pri
 TOPIC_MAP_HEADERS = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
 LESSON_PLANS_HEADERS = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
 CONCEPTS_HEADERS = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
-HOMEWORK_HEADERS = ["homework_id", "chapter_id", "topic_id", "set_title", "sequence_no", "question_text", "marks", "difficulty", "answer", "explanation", "status"]
+HOMEWORK_HEADERS = [
+    "homework_id", "chapter_id", "topic_id", "set_title", "sequence_no",
+    "question_text", "marks", "difficulty", "answer", "explanation", "status",
+    "asset_format", "asset_data", "asset_placement", "asset_width", "asset_height"
+]
 RESOURCES_HEADERS = ["resource_id", "chapter_id", "topic_id", "resource_type", "title", "url", "description", "status"]
 
 REQUIRED_SHEETS = [
@@ -155,6 +159,12 @@ def validate_workbook(path: Path) -> list[str]:
                 errors.append(f"{sheet_name} Row {idx} ({pk}): topic_id {t_id!r} not found in Topic_Map")
             if c_id not in ch_ids:
                 errors.append(f"{sheet_name} Row {idx} ({pk}): chapter_id {c_id!r} not found in Chapter_Map")
+
+            if sheet_name == "Homework":
+                asset_fmt = cell_str(row[col.get("asset_format", -1)]) if "asset_format" in col else ""
+                asset_data = cell_str(row[col.get("asset_data", -1)]) if "asset_data" in col else ""
+                if asset_fmt and not asset_data:
+                    errors.append(f"{sheet_name} Row {idx} ({pk}): asset_format set but asset_data empty")
 
     # 5. Validate Lesson_Plans
     validate_topic_linked_sheet("Lesson_Plans", LESSON_PLANS_HEADERS, "lesson_plan_id")

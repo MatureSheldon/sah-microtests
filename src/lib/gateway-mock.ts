@@ -265,19 +265,17 @@ export function mockGetPeriodContext(slotId: string): PeriodContext {
 }
 
 export function mockGetHomework(_classId: string, _subjectId: string, _topicId: string): { set: HomeworkSet; items: HomeworkItem[] } | null {
-  // Only Class 8 Math has mock homework
-  if (_classId !== 'CLASS_8') return null;
   return {
     set: {
-      homework_set_id: 'HW_C8_MATH_CH01_T01_01', class_id: 'CLASS_8', subject_id: 'MATH',
-      chapter_id: 'MATH8_CH01', topic_id: 'MATH8_CH01_T01', subtopic_id: '',
-      title: 'Rational Numbers Practice', source_mode: 'question_bank',
-      total_questions: 5, estimated_minutes: 20, status: 'active',
+      homework_set_id: `HW_${_classId}_${_subjectId}_${_topicId}`, class_id: _classId, subject_id: _subjectId,
+      chapter_id: '', topic_id: _topicId, subtopic_id: '',
+      title: `${_subjectId} Practice for ${_topicId}`, source_mode: 'question_bank',
+      total_questions: 3, estimated_minutes: 15, status: 'active',
     },
     items: [
-      { homework_item_id: 'HWI_001', homework_set_id: 'HW_C8_MATH_CH01_T01_01', source_type: 'manual', question_id: '', question_text: 'Represent 3/4 on the number line.', marks: 2, difficulty: 'Easy', sequence_no: 1 },
-      { homework_item_id: 'HWI_002', homework_set_id: 'HW_C8_MATH_CH01_T01_01', source_type: 'manual', question_id: '', question_text: 'Find three rational numbers between 1/4 and 1/2.', marks: 2, difficulty: 'Medium', sequence_no: 2 },
-      { homework_item_id: 'HWI_003', homework_set_id: 'HW_C8_MATH_CH01_T01_01', source_type: 'manual', question_id: '', question_text: 'Verify the associative property of addition for −2/3, 4/5, and 1/2.', marks: 3, difficulty: 'Medium', sequence_no: 3 },
+      { homework_item_id: 'HWI_001', homework_set_id: `HW_${_topicId}`, source_type: 'manual', question_id: '', question_text: `What is the primary significance of ${_topicId}?`, marks: 2, difficulty: 'Easy', sequence_no: 1 },
+      { homework_item_id: 'HWI_002', homework_set_id: `HW_${_topicId}`, source_type: 'manual', question_id: '', question_text: `Explain how ${_topicId} relates to real-world applications.`, marks: 3, difficulty: 'Medium', sequence_no: 2 },
+      { homework_item_id: 'HWI_003', homework_set_id: `HW_${_topicId}`, source_type: 'manual', question_id: '', question_text: `Evaluate a complex scenario involving the principles of ${_topicId}.`, marks: 5, difficulty: 'Hard', sequence_no: 3 },
     ],
   };
 }

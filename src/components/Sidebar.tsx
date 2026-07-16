@@ -2,16 +2,19 @@ import { Link, useLocation } from 'react-router-dom';
 import { NAV } from '../lib/data';
 import { useTeacher } from './TeacherContext';
 import { useEffect, useState } from 'react';
-import { getTeacherClasses } from '../lib/gateway';
+import { getTeacherAssignments } from '../lib/gateway';
+import type { TeacherAssignment } from '../lib/models';
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { teacher, setTeacherId } = useTeacher();
-  const [myClasses, setMyClasses] = useState<string[]>([]);
+  const [myAssignments, setMyAssignments] = useState<TeacherAssignment[]>([]);
 
   useEffect(() => {
     if (teacher) {
-      getTeacherClasses(teacher.teacher_id).then(setMyClasses).catch(() => setMyClasses([]));
+      getTeacherAssignments(teacher.teacher_id)
+        .then(setMyAssignments)
+        .catch(() => setMyAssignments([]));
     }
   }, [teacher?.teacher_id]);
 
@@ -64,16 +67,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             My Classes
           </div>
           <div className="space-y-1 text-sm">
-            {myClasses.map((c) => (
-              <a
-                key={c}
-                href="#"
-                className="block px-3 py-1.5 text-slate-500 hover:text-brand-primary hover:bg-slate-50 rounded-md transition-colors"
-              >
-                {c}
-              </a>
-            ))}
-            {myClasses.length === 0 && (
+            {myAssignments.map((a) => {
+              // Convert subject codes to friendly names if needed
+              const subjectNames: Record<string, string> = { MATH: 'Math', SCI: 'Science', ENG: 'English', SST: 'Social Science' };
+              const subjectLabel = subjectNames[a.subject_id] || a.subject_id;
+              
+              return (
+                <Link
+                  key={`${a.class_id}_${a.subject_id}`}
+                  to={`/chapters?class=${a.class_id}&subject=${a.subject_id}`}
+                  onClick={onNavigate}
+                  className="block px-3 py-1.5 text-slate-500 hover:text-brand-primary hover:bg-slate-50 rounded-md transition-colors"
+                >
+                  Class {a.class_label} · {subjectLabel}
+                </Link>
+              );
+            })}
+            {myAssignments.length === 0 && (
               <p className="px-3 py-1.5 text-xs text-slate-400 italic">No classes assigned</p>
             )}
           </div>

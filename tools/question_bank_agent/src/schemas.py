@@ -373,7 +373,11 @@ CHAPTER_MAP_HEADERS: list[str] = ["chapter_id", "chapter_no", "chapter_title", "
 TOPIC_MAP_HEADERS: list[str] = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
 LESSON_PLANS_HEADERS: list[str] = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
 CONCEPTS_HEADERS: list[str] = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
-HOMEWORK_HEADERS: list[str] = ["homework_id", "chapter_id", "topic_id", "set_title", "sequence_no", "question_text", "marks", "difficulty", "answer", "explanation", "status"]
+HOMEWORK_HEADERS: list[str] = [
+    "homework_id", "chapter_id", "topic_id", "set_title", "sequence_no",
+    "question_text", "marks", "difficulty", "answer", "explanation", "status",
+    "asset_format", "asset_data", "asset_placement", "asset_width", "asset_height"
+]
 RESOURCES_HEADERS: list[str] = ["resource_id", "chapter_id", "topic_id", "resource_type", "title", "url", "description", "status"]
 
 
@@ -433,8 +437,8 @@ class ConceptRow(BaseModel):
     topic_id: str = Field(alias="topic_id", min_length=1)
     concept_title: str = Field(alias="concept_title", min_length=1)
     explanation: str = Field(alias="explanation")
-    key_formulas: str = Field(alias="key_formulas", default="") # Semicolon separated
-    misconceptions: str = Field(alias="misconceptions", default="") # Semicolon separated
+    key_formulas: str = Field(alias="key_formulas", default="") # Newline or semicolon separated
+    misconceptions: str = Field(alias="misconceptions", default="") # Prefer newline-separated complete points
     visual_type: str = Field(alias="visual_type", default="")
     visual_data: str = Field(alias="visual_data", default="")
     notes: str = Field(alias="notes", default="")
@@ -460,11 +464,17 @@ class HomeworkRow(BaseModel):
     answer: str = Field(alias="answer")
     explanation: str = Field(alias="explanation")
     status: str = Field(alias="status", default="active")
+    asset_format: str = Field(alias="asset_format", default="")
+    asset_data: str = Field(alias="asset_data", default="")
+    asset_placement: str = Field(alias="asset_placement", default="")
+    asset_width: str = Field(alias="asset_width", default="")
+    asset_height: str = Field(alias="asset_height", default="")
 
     def to_sheet_row(self) -> list[Any]:
         return [
             self.homework_id, self.chapter_id, self.topic_id, self.set_title, self.sequence_no,
-            self.question_text, self.marks, self.difficulty, self.answer, self.explanation, self.status
+            self.question_text, self.marks, self.difficulty, self.answer, self.explanation, self.status,
+            self.asset_format, self.asset_data, self.asset_placement, self.asset_width, self.asset_height
         ]
 
 
@@ -484,4 +494,3 @@ class ResourceRow(BaseModel):
             self.resource_id, self.chapter_id, self.topic_id, self.resource_type,
             self.title, self.url, self.description, self.status
         ]
-

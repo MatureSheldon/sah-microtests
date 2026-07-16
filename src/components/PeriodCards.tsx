@@ -105,7 +105,10 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
 
       {homeworkOpen && (
         <HomeworkViewer 
-          period={period} 
+          classId={period.slot.class_id}
+          subjectId={period.slot.subject_id}
+          topicId={period.topic_id}
+          topicTitle={period.topic_title}
           onClose={() => setHomeworkOpen(false)} 
         />
       )}

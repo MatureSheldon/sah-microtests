@@ -17,21 +17,53 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true
+        skipWaiting: true,
+        // Cache Google Fonts (CSS + font files)
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-css',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Cache Gateway API responses — NetworkFirst so live data is preferred
+          {
+            urlPattern: /^https:\/\/script\.google\.com\/macros\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'gateway-api',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 10,
+            },
+          },
+        ],
       },
       manifest: {
+        id: '/sah-microtests/',
         name: 'SAH Command Center',
         short_name: 'SAH Command',
         description: 'Mission control for teachers at Scholars Academic Home',
+        start_url: '/sah-microtests/',
+        scope: '/sah-microtests/',
         theme_color: '#2563eb',
         background_color: '#f8fafc',
         display: 'standalone',
+        orientation: 'portrait',
+        categories: ['education', 'productivity'],
         icons: [
-          {
-            src: 'favicon.ico',
-            sizes: '64x64 32x32 24x24 16x16',
-            type: 'image/x-icon'
-          },
           {
             src: 'icon-192.png',
             sizes: '192x192',
@@ -41,6 +73,12 @@ export default defineConfig({
             src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

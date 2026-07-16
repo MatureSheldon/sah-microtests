@@ -30,14 +30,35 @@ export function TeacherSelector() {
         <div className="p-4 max-h-[50vh] overflow-y-auto">
           {error ? (
             <div className="p-6 bg-rose-50 rounded-xl border border-rose-100 text-center">
-              <div className="text-2xl mb-2">⚠️</div>
-              <h3 className="text-rose-800 font-bold mb-1">Connection Error</h3>
-              <p className="text-sm text-rose-600 mb-4">{error}</p>
+              <div className="text-3xl mb-3">⚠️</div>
+              <h3 className="text-rose-800 font-bold mb-2">Connection Error</h3>
+              {error.includes('Failed to fetch') ? (
+                <div className="text-left text-sm text-rose-700 mb-5 space-y-3 bg-white/50 p-4 rounded-lg border border-rose-100">
+                  <p className="font-semibold text-rose-800 border-b border-rose-200/50 pb-1">Browser Security Blocked the Request</p>
+                  
+                  <div>
+                    <p className="font-medium mb-1">If using Google Chrome:</p>
+                    <ul className="list-disc pl-5 space-y-1 text-[13px]">
+                      <li><strong>Multiple Google Accounts:</strong> If you are logged into multiple Google accounts, Chrome blocks the connection. Try opening this page in an <strong>Incognito Window</strong>.</li>
+                      <li><strong>Ad-Blockers:</strong> Disable uBlock Origin or Brave Shields for this site, as they may block Google Apps Script.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-medium mb-1">If using Safari / iOS:</p>
+                    <ul className="list-disc pl-5 space-y-1 text-[13px]">
+                      <li>Go to Safari Settings &gt; Privacy &gt; Uncheck <strong>"Prevent cross-site tracking"</strong>.</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-rose-600 mb-5">{error}</p>
+              )}
               <button 
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-rose-600 text-white text-sm font-semibold rounded-lg hover:bg-rose-700 transition-colors"
+                className="px-5 py-2.5 bg-rose-600 text-white text-sm font-semibold rounded-lg hover:bg-rose-700 transition-colors shadow-sm"
               >
-                Retry Connection
+                Reload Application
               </button>
             </div>
           ) : (

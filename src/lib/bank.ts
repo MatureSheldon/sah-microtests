@@ -139,7 +139,18 @@ function normalizeQuestion(raw: any): Question {
       }
     }
 
-    return {
+      let questionText = String(raw.question || raw.Question || raw.question || '').trim();
+      
+      // Extract Mermaid diagrams embedded in the text as "Image: flowchart LR..."
+      const mermaidMatch = questionText.match(/Image:\s*(flowchart|graph|pie|sequenceDiagram|stateDiagram|classDiagram|erDiagram|gantt|journey|gitGraph|mindmap|timeline)[ \S\s]*/i);
+      if (mermaidMatch) {
+        if (!imageUrl) {
+          imageUrl = mermaidMatch[0].replace(/^Image:\s*/i, '').trim();
+        }
+        questionText = questionText.substring(0, mermaidMatch.index).trim();
+      }
+
+      return {
       ...raw,
       id: String(raw.id || raw['Question ID'] || raw['question id'] || raw.question_id || '').trim(),
       classLevel: normalizeClass(raw.classLevel || raw.Class || raw.class),
@@ -150,7 +161,7 @@ function normalizeQuestion(raw: any): Question {
       questionType: String(raw.questionType || raw['Question Type'] || raw['question type'] || raw.question_type || '').trim(),
       difficulty: String(raw.difficulty || raw.Difficulty || raw.difficulty || 'Easy').trim() as Question['difficulty'],
       marks: Number(raw.marks || raw.Marks || raw.marks || 1),
-      question: String(raw.question || raw.Question || raw.question || '').trim(),
+      question: questionText,
       options: (options.A || options.B || options.C || options.D) ? options : undefined,
       imageUrl,
       timesAsked: Number(raw.timesAsked || raw['Times Asked'] || raw['times asked'] || raw.times_asked || 0),
