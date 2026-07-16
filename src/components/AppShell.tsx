@@ -35,7 +35,7 @@ export function AppShell() {
         <div className="print:hidden sticky top-0 z-10">
           <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
         </div>
-        <div className="p-4 md:p-8 space-y-10 max-w-[1400px] w-full print:p-0 print:space-y-0 print:block mx-auto">
+        <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-8 space-y-10 max-w-[1400px] w-full print:p-0 print:space-y-0 print:block mx-auto">
           <Suspense fallback={<RouteFallback />}>
             <div>
               <Outlet />

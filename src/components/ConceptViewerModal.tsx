@@ -115,13 +115,13 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
   }, [classId, subjectId, chapterId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-12 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 lg:p-12 animate-in fade-in duration-200">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative bg-slate-50 w-full max-w-[1200px] max-h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative bg-slate-50 w-full h-full sm:h-auto sm:max-h-full max-w-[1200px] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div className="bg-white px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[10px] font-bold px-2 py-0.5 bg-brand-accent/10 text-brand-accent rounded uppercase tracking-wider">
@@ -142,7 +142,7 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-10 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 scroll-smooth">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
@@ -155,7 +155,7 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                <p className="text-slate-500 max-w-md">{error}</p>
             </div>
           ) : concepts.length > 0 ? (
-            <div className="max-w-4xl mx-auto space-y-12 animate-in slide-in-from-bottom-8 duration-500 pb-12">
+            <div className="max-w-4xl mx-auto space-y-8 sm:space-y-12 animate-in slide-in-from-bottom-8 duration-500 pb-12">
               
               {/* Concept Index (Table of Contents) */}
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-10">
@@ -184,7 +184,7 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                     <span className="text-sm font-bold text-brand-accent tracking-widest uppercase mb-2 block">
                       Concept {idx + 1}
                     </span>
-                    <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight">
                       {concept.title}
                     </h1>
                   </div>

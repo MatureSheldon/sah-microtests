@@ -59,7 +59,7 @@ function TopicRow({
         <p className="text-sm font-medium text-slate-800 truncate">{topic.topic_title || `Topic ${topic.sequence_no}`}</p>
         <p className="text-xs text-slate-400 mt-0.5">{topic.planned_periods} period{topic.planned_periods !== 1 ? 's' : ''}</p>
       </div>
-      <div className="flex flex-wrap gap-1.5 shrink-0">
+      <div className="flex flex-wrap gap-1.5 shrink-0 mt-2 sm:mt-0">
         {pills.map((pill) => (
           <button
             key={pill.label}
@@ -106,35 +106,45 @@ function ChapterCard({
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <button
-        className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+        className="w-full flex flex-col sm:flex-row sm:items-center gap-4 px-4 sm:px-6 py-4 text-left hover:bg-slate-50 transition-colors"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="size-9 shrink-0 flex items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent font-bold text-sm">
-          {chapter.chapter_no}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-slate-800 truncate">{chapter.chapter_title}</p>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {total} topic{total !== 1 ? 's' : ''} · {chapter.total_periods || '?'} periods
-            {available > 0 && (
-              <span className="ml-2 text-emerald-600 font-semibold">
-                · {available} with content
-              </span>
-            )}
-          </p>
+        <div className="flex items-center justify-between w-full sm:w-auto sm:flex-1 min-w-0 gap-3">
+          <span className="size-9 shrink-0 flex items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent font-bold text-sm">
+            {chapter.chapter_no}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-slate-800 truncate" title={chapter.chapter_title}>{chapter.chapter_title}</p>
+            <p className="text-xs text-slate-400 mt-0.5 sm:truncate">
+              {total} topic{total !== 1 ? 's' : ''} · {chapter.total_periods || '?'} periods
+              {available > 0 && (
+                <span className="ml-1.5 text-emerald-600 font-semibold">
+                  · {available} with content
+                </span>
+              )}
+            </p>
+          </div>
+          <span
+            className={`text-slate-400 transition-transform duration-200 text-lg sm:hidden ${open ? 'rotate-90' : ''}`}
+          >
+            ›
+          </span>
         </div>
-        <button 
-          onClick={(e) => { e.stopPropagation(); setViewerChapter({ id: chapter.chapter_id, title: chapter.chapter_title }) }}
-          className="px-3 py-1.5 text-xs font-bold text-brand-accent bg-brand-accent/10 rounded-lg hover:bg-brand-accent/20 transition-colors"
-        >
-          🧠 Concept Map
-        </button>
-        <span
-          className={`text-slate-400 transition-transform duration-200 text-lg ${open ? 'rotate-90' : ''}`}
-        >
-          ›
-        </span>
+        
+        <div className="flex items-center justify-between w-full sm:w-auto sm:shrink-0 gap-4 pl-12 sm:pl-0">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setViewerChapter({ id: chapter.chapter_id, title: chapter.chapter_title }) }}
+            className="w-full sm:w-auto px-4 sm:px-3 py-2 sm:py-1.5 text-sm sm:text-xs font-bold text-brand-accent bg-brand-accent/10 rounded-lg hover:bg-brand-accent/20 transition-colors"
+          >
+            🧠 Concept Map
+          </button>
+          <span
+            className={`hidden sm:block text-slate-400 transition-transform duration-200 text-lg ${open ? 'rotate-90' : ''}`}
+          >
+            ›
+          </span>
+        </div>
       </button>
 
       {open && (

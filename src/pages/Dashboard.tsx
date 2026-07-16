@@ -102,7 +102,7 @@ function TodaySection() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Today's Periods</h2>
           <p className="text-sm text-slate-500">
@@ -110,7 +110,7 @@ function TodaySection() {
             {currentPeriod ? ` · ${currentPeriod.class_label}-${currentPeriod.section_label} ${currentPeriod.subject_name} now` : ''}
           </p>
         </div>
-        <Link to="/timetable" className="text-sm font-semibold text-brand-accent hover:underline">
+        <Link to="/timetable" className="text-sm font-semibold text-brand-accent hover:underline self-start sm:self-auto">
           View Full Timetable →
         </Link>
       </div>
@@ -158,7 +158,7 @@ function TodaySection() {
 function RoadmapSection() {
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Yearly Teaching Roadmap</h2>
           <p className="text-sm text-slate-500">
@@ -166,10 +166,10 @@ function RoadmapSection() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white border border-border-subtle rounded-lg text-sm font-medium hover:bg-slate-50">
+          <button className="px-3 sm:px-4 py-2 bg-white border border-border-subtle rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-50">
             Adjust Priorities
           </button>
-          <button className="px-4 py-2 bg-brand-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600">
+          <button className="px-3 sm:px-4 py-2 bg-brand-accent text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-600">
             Print Syllabus
           </button>
         </div>

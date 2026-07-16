@@ -16,7 +16,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
           <span className="flex h-2 w-2 rounded-full bg-brand-accent animate-pulse" />
         </div>
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-xs font-bold px-2 py-1 bg-brand-accent text-white rounded">
               PERIOD {period.slot.period_no}
             </span>
@@ -44,7 +44,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
             <span className="text-brand-accent font-medium">Topic: {period.topic_title || 'TBD'}</span>
           </p>
 
-          <div className="grid grid-cols-4 gap-2 mt-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-auto">
             <ResourceTile 
               label="Plan" 
               cta={r.has_lesson_plan ? 'Review LP' : 'Not available'}
@@ -74,7 +74,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
             />
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
             <button 
               onClick={() => setMarkDoneOpen(true)}
               className="flex-1 py-2 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors"

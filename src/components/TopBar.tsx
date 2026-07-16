@@ -42,8 +42,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           <span className="size-1.5 rounded-full bg-emerald-500" /> Synced 2m ago
         </button>
         <div className="text-right mr-1">
-          <p className="text-sm font-medium">{dateStr}</p>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Week {weekNo} · {term}</p>
+          <p className="text-xs sm:text-sm font-medium">{dateStr}</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider">Week {weekNo} · {term}</p>
         </div>
         <div className="size-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 border border-border-subtle flex items-center justify-center text-sm font-semibold text-brand-accent">
           {teacher?.short_name || '?'}
