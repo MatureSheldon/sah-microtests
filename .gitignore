@@ -3,6 +3,7 @@ config.json
 .env
 .env.*
 !.env.example
+!.env.production
 
 # Python / agent tooling
 .venv/
