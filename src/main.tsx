@@ -8,9 +8,26 @@ import { TeacherSelector } from './components/TeacherSelector';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 
+import { registerSW } from 'virtual:pwa-register';
+
 if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
     registrations.forEach((registration) => registration.unregister());
+  });
+} else if ('serviceWorker' in navigator) {
+  // Automatically register and update service worker in production
+  registerSW({
+    immediate: true,
+    onRegistered(r) {
+      r && setInterval(() => {
+        r.update();
+      }, 60 * 60 * 1000); // Check for SW updates every hour
+    },
+    onNeedRefresh() {
+      // With autoUpdate, this usually won't fire unless skipWaiting is false.
+      // But if it does, we force reload to get the latest version.
+      window.location.reload();
+    }
   });
 }
 
