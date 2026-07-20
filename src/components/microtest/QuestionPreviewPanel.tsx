@@ -2,6 +2,7 @@ import React from 'react';
 import { renderMarkdownToHtml } from '../../lib/utils';
 import { Question } from '../../lib/bank';
 import { MermaidDiagram } from '../MermaidDiagram';
+import { GeoJsonMap } from '../GeoJsonMap';
 
 interface Props {
   state: any;
@@ -135,34 +136,41 @@ export function QuestionPreviewPanel({ state, filtering }: Props) {
 
                     <div className="text-sm text-slate-800 leading-snug mb-2" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.question) }} />
                     
-                    {q.imageUrl && (
-                      <div className="mt-3">
-                        {q.imageUrl.trim().startsWith('<svg') ? (
-                          <div
-                            className="max-h-72 max-w-full rounded-lg border flex items-center justify-center p-4 bg-white [&>svg]:max-h-64 [&>svg]:w-auto"
-                            dangerouslySetInnerHTML={{ __html: q.imageUrl }}
-                          />
-                        ) : q.imageUrl.trim().match(/^(flowchart|graph|pie|sequenceDiagram|stateDiagram|classDiagram|erDiagram|gantt|journey|gitGraph|mindmap|timeline)/i) ? (
-                          <div className="rounded-lg border bg-white p-4">
-                            <MermaidDiagram chart={q.imageUrl} />
+                    {(q.assetData || q.imageUrl) && (() => {
+                      const assetFormat = String(q.assetFormat || '').trim().toLowerCase();
+                      const assetData = String(q.assetData || '').trim();
+                      const visual = assetData || String(q.imageUrl || '').trim();
+                      return (
+                        <div className="mt-3">
+                          {assetFormat === 'geojson' ? (
+                            <GeoJsonMap data={visual} title={`Question ${i + 1} map`} />
+                          ) : visual.startsWith('<svg') ? (
+                            <div
+                              className="max-h-72 max-w-full rounded-lg border flex items-center justify-center p-4 bg-white [&>svg]:max-h-64 [&>svg]:w-auto"
+                              dangerouslySetInnerHTML={{ __html: visual }}
+                            />
+                          ) : assetFormat === 'mermaid' || visual.match(/^(flowchart|graph|pie|sequenceDiagram|stateDiagram|classDiagram|erDiagram|gantt|journey|gitGraph|mindmap|timeline)/i) ? (
+                            <div className="rounded-lg border bg-white p-4">
+                              <MermaidDiagram chart={visual} />
+                            </div>
+                          ) : (
+                            <img
+                              src={visual}
+                              alt={`Question ${i + 1} diagram`}
+                              className="max-h-72 max-w-full rounded-lg border object-contain"
+                              onError={(e) => {
+                                console.error("Image failed to load", q.id, visual);
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                          <div className="mt-1 text-xs text-slate-500 truncate">
+                            {assetFormat === 'geojson' ? 'GeoJSON Map' : visual.startsWith('<svg') ? 'Raw SVG Image' :
+                             assetFormat === 'mermaid' || visual.match(/^(flowchart|graph|pie|sequenceDiagram)/i) ? 'Mermaid Diagram' : `Image: ${visual}`}
                           </div>
-                        ) : (
-                          <img
-                            src={q.imageUrl}
-                            alt={`Question ${i + 1} diagram`}
-                            className="max-h-72 max-w-full rounded-lg border object-contain"
-                            onError={(e) => {
-                              console.error("Image failed to load", q.id, q.imageUrl);
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        )}
-                        <div className="mt-1 text-xs text-slate-500 truncate">
-                          {q.imageUrl.trim().startsWith('<svg') ? 'Raw SVG Image' : 
-                           q.imageUrl.trim().match(/^(flowchart|graph|pie|sequenceDiagram)/i) ? 'Mermaid Diagram' : `Image: ${q.imageUrl}`}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {q.options && (
                       <div className="text-[13px] text-slate-600 leading-relaxed bg-white/60 rounded-md p-3 border border-slate-100">

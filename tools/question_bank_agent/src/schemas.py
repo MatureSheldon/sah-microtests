@@ -48,6 +48,10 @@ SAH_HEADERS: list[str] = [
     "Asset Placement",
     "Asset Width",
     "Asset Height",
+    "Cognitive Skill",
+    "Mastery Band",
+    "Revision Link",
+    "Quality Tags",
 ]
 
 QUESTION_TYPE_ORDER: list[str] = [
@@ -68,6 +72,7 @@ ALLOWED_ASSET_FORMATS = {
     "jpeg",
     "svg",
     "mermaid",
+    "geojson",
     "table",
     "html",
 }
@@ -370,7 +375,7 @@ def sort_questions(rows: list[QuestionRow]) -> list[QuestionRow]:
 # --- Schemas for Dynamic Courseware Sheets ---
 
 CHAPTER_MAP_HEADERS: list[str] = ["chapter_id", "chapter_no", "chapter_title", "default_priority", "status"]
-TOPIC_MAP_HEADERS: list[str] = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
+TOPIC_MAP_HEADERS: list[str] = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status", "struggle_status", "historical_difficulty", "mastery_band", "prerequisite_topic_ids", "teacher_review_status"]
 LESSON_PLANS_HEADERS: list[str] = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
 CONCEPTS_HEADERS: list[str] = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
 HOMEWORK_HEADERS: list[str] = [

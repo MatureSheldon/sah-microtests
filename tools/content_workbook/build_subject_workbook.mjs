@@ -9,7 +9,7 @@ const artifactToolModule =
 
 const { SpreadsheetFile, Workbook } = await import(pathToFileURL(artifactToolModule).href);
 
-const SHEETS = [
+const BASE_SHEETS = [
   ["Chapter_Map", "Chapter_Map.csv"],
   ["Topic_Map", "Topic_Map.csv"],
   ["Lesson_Plans", "Lesson_Plans.csv"],
@@ -19,14 +19,21 @@ const SHEETS = [
   ["Questions", "Questions.csv"],
 ];
 
+const OPTIONAL_SHEETS = [
+  ["Worked_Examples", "Worked_Examples.csv"],
+  ["Teacher_Review", "Teacher_Review.csv"],
+];
+
 const WIDTHS = {
   Chapter_Map: [18, 12, 46, 16, 14],
-  Topic_Map: [20, 18, 14, 44, 16, 18, 72, 14],
+  Topic_Map: [20, 18, 14, 44, 16, 18, 72, 14, 18, 22, 18, 26, 22],
   Lesson_Plans: [22, 18, 20, 54, 54, 54, 54, 54, 54, 40, 44],
   Concepts: [22, 18, 20, 38, 78, 46, 46, 16, 76, 42],
   Homework: [24, 18, 20, 40, 14, 78, 10, 14, 72, 72, 14, 16, 76, 18, 14, 14],
   Resources: [24, 18, 20, 18, 48, 42, 68, 14],
-  Questions: [24, 10, 14, 12, 44, 38, 30, 14, 20, 22, 10, 78, 28, 28, 28, 28, 18, 54, 58, 48, 44, 24, 12, 20, 20, 14, 12, 16, 18, 16, 36, 28, 16, 52, 18, 14, 14],
+  Questions: [24, 10, 14, 12, 44, 38, 30, 14, 20, 22, 10, 78, 28, 28, 28, 28, 18, 54, 58, 48, 44, 24, 12, 20, 20, 14, 12, 16, 18, 16, 36, 28, 16, 52, 18, 14, 14, 20, 18, 28, 32],
+  Worked_Examples: [26, 18, 20, 42, 72, 90, 42, 58, 58, 16, 76, 14],
+  Teacher_Review: [24, 16, 24, 18, 20, 22, 14, 22, 72, 18],
 };
 
 function parseArgs(argv) {
@@ -75,16 +82,27 @@ async function main() {
     args.output ??
     path.join(sourceDir, `class-${padClass(classLevel)}-${slug(subject)}-subject-workbook.xlsx`);
 
-  const [firstSheetName, firstFile] = SHEETS[0];
+  const optionalExisting = [];
+  for (const [sheetName, fileName] of OPTIONAL_SHEETS) {
+    try {
+      await fs.access(path.join(sourceDir, fileName));
+      optionalExisting.push([sheetName, fileName]);
+    } catch {
+      // Optional quality sheet is absent in older workbook folders.
+    }
+  }
+  const sheets = [...BASE_SHEETS, ...optionalExisting];
+
+  const [firstSheetName, firstFile] = sheets[0];
   const firstCsv = await fs.readFile(path.join(sourceDir, firstFile), "utf8");
   const workbook = await Workbook.fromCSV(firstCsv, { sheetName: firstSheetName });
 
-  for (const [sheetName, fileName] of SHEETS.slice(1)) {
+  for (const [sheetName, fileName] of sheets.slice(1)) {
     const csvText = await fs.readFile(path.join(sourceDir, fileName), "utf8");
     await workbook.fromCSV(csvText, { sheetName });
   }
 
-  for (const [sheetName] of SHEETS) {
+  for (const [sheetName] of sheets) {
     const sheet = workbook.worksheets.getItem(sheetName);
     const used = sheet.getUsedRange();
     used.format.font.name = "Aptos";
@@ -117,7 +135,7 @@ async function main() {
   }
 
   const counts = {};
-  for (const [sheetName, fileName] of SHEETS) {
+  for (const [sheetName, fileName] of sheets) {
     counts[sheetName] = await rowCountForCsv(sourceDir, fileName);
   }
 
@@ -142,6 +160,7 @@ async function main() {
     ["Question rows", String(counts.Questions)],
     ["Courseware tabs", "Chapter_Map, Topic_Map, Lesson_Plans, Concepts, Homework, Resources"],
     ["Question bank tab", "Questions"],
+    ["Quality tabs", optionalExisting.map(([name]) => name).join(", ") || "None"],
     ["Concept visual format", "Use visual_type = mermaid for flows/cycles/trees and svg for spatial/scientific diagrams."],
     ["Homework design", "Homework is concept-depth practice, not timed testing. Homework may include Mermaid or SVG assets in asset_format/asset_data."],
   ];

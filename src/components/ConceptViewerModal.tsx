@@ -3,6 +3,7 @@ import { getChapterConcepts, getHomework } from '../lib/gateway';
 import type { Concept, HomeworkSet, HomeworkItem } from '../lib/models';
 import { renderMarkdownToHtml } from '../lib/utils';
 import { MermaidDiagram } from './MermaidDiagram';
+import { GeoJsonMap } from './GeoJsonMap';
 
 interface Props {
   classId: string;
@@ -21,6 +22,10 @@ function decodeSvgMarkup(value: string) {
     .replace(/&amp;/g, '&');
 }
 
+function isGeoJsonVisual(visualType: string | undefined) {
+  return String(visualType || '').trim().toLowerCase() === 'geojson';
+}
+
 function isSvgVisual(visualType: string | undefined, visualData: string | undefined) {
   const type = String(visualType || '').trim().toLowerCase();
   const data = String(visualData || '').trim();
@@ -33,7 +38,16 @@ function TopicHomework({ classId, subjectId, topicId }: { classId: string, subje
 
   useEffect(() => {
     getHomework(classId, subjectId, topicId)
-      .then(res => setData(res))
+      .then(res => {
+        if (res && res.items) {
+          res.items = res.items.filter(i => String(i.topic_id || '').trim() === String(topicId).trim());
+          if (res.items.length > 0 && res.set) {
+            res.set.total_questions = res.items.length;
+            res.set.estimated_minutes = Math.ceil(res.items.length * 3.5);
+          }
+        }
+        setData(res);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [classId, subjectId, topicId]);
@@ -167,9 +181,14 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                     <li key={concept.id} className="text-slate-600 font-medium">
                       <a 
                         href={`#concept-${idx}`}
-                        className="hover:text-brand-accent hover:underline transition-colors cursor-pointer"
+                        className="hover:text-brand-accent hover:underline transition-colors cursor-pointer flex items-center gap-2"
                       >
                         {concept.title}
+                        {concept.struggle_status === 'active' && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded border border-rose-200">
+                            ⚠️ Class Struggled
+                          </span>
+                        )}
                       </a>
                     </li>
                   ))}
@@ -184,9 +203,16 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                     <span className="text-sm font-bold text-brand-accent tracking-widest uppercase mb-2 block">
                       Concept {idx + 1}
                     </span>
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight">
-                      {concept.title}
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight">
+                        {concept.title}
+                      </h1>
+                      {concept.struggle_status === 'active' && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-semibold text-sm shadow-sm animate-pulse">
+                          <span>⚠️</span> Students found this difficult
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Explanation */}
@@ -209,6 +235,8 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                       <div className="w-full flex items-center justify-center overflow-x-auto min-h-[300px]">
                         {String(concept.visual_type || '').trim().toLowerCase() === 'mermaid' ? (
                           <MermaidDiagram chart={concept.visual_data} />
+                        ) : isGeoJsonVisual(concept.visual_type) ? (
+                          <GeoJsonMap data={concept.visual_data} title={concept.title} />
                         ) : isSvgVisual(concept.visual_type, concept.visual_data) ? (
                           <div
                             className="w-full max-w-[760px] rounded-lg bg-white [&>svg]:block [&>svg]:w-full [&>svg]:h-auto"

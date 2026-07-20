@@ -21,15 +21,18 @@ except ImportError:
 
 # Column schemas
 CHAPTER_MAP_HEADERS = ["chapter_id", "chapter_no", "chapter_title", "default_priority", "status"]
-TOPIC_MAP_HEADERS = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
+TOPIC_MAP_HEADERS = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status", "struggle_status", "historical_difficulty", "mastery_band", "prerequisite_topic_ids", "teacher_review_status"]
 LESSON_PLANS_HEADERS = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
-CONCEPTS_HEADERS = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
+CONCEPTS_HEADERS = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes", "local_example", "teacher_review_status"]
 HOMEWORK_HEADERS = [
     "homework_id", "chapter_id", "topic_id", "set_title", "sequence_no",
     "question_text", "marks", "difficulty", "answer", "explanation", "status",
-    "asset_format", "asset_data", "asset_placement", "asset_width", "asset_height"
+    "asset_format", "asset_data", "asset_placement", "asset_width", "asset_height",
+    "homework_kind", "estimated_minutes", "core_concept_coverage"
 ]
 RESOURCES_HEADERS = ["resource_id", "chapter_id", "topic_id", "resource_type", "title", "url", "description", "status"]
+WORKED_EXAMPLES_HEADERS = ["worked_example_id", "chapter_id", "topic_id", "example_title", "problem", "step_by_step_solution", "answer", "common_mistake", "teacher_note", "visual_type", "visual_data", "status"]
+TEACHER_REVIEW_HEADERS = ["review_id", "scope_type", "scope_id", "chapter_id", "topic_id", "review_status", "quality_score", "reviewer", "review_notes", "last_reviewed"]
 
 REQUIRED_SHEETS = [
     "Chapter_Map",
@@ -40,6 +43,11 @@ REQUIRED_SHEETS = [
     "Resources",
     QUESTIONS_SHEET_NAME
 ]
+
+OPTIONAL_SHEETS = {
+    "Worked_Examples": WORKED_EXAMPLES_HEADERS,
+    "Teacher_Review": TEACHER_REVIEW_HEADERS,
+}
 
 MATHS_CASE_PARTS = ("(i)", "(ii)", "(iii)")
 MATHS_CASE_MARKS = (1, 1, 2)
@@ -178,7 +186,16 @@ def validate_workbook(path: Path) -> list[str]:
     # 8. Validate Resources
     validate_topic_linked_sheet("Resources", RESOURCES_HEADERS, "resource_id")
 
-    # 9. Validate Questions (existing validations)
+    # 9. Validate optional quality sheets when present
+    for optional_name, optional_headers in OPTIONAL_SHEETS.items():
+        if optional_name in wb.sheetnames:
+            ws_opt = wb[optional_name]
+            opt_rows = list(ws_opt.iter_rows(values_only=True))
+            if opt_rows:
+                actual_headers = [cell_str(h) for h in opt_rows[0]]
+                validate_sheet_headers(optional_name, actual_headers, optional_headers, errors)
+
+    # 10. Validate Questions (existing validations)
     ws_q = wb[QUESTIONS_SHEET_NAME]
     q_rows = list(ws_q.iter_rows(values_only=True))
     if not q_rows:

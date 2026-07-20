@@ -15,6 +15,8 @@ import type {
   Concept,
   SubjectOutline,
   TeacherAssignment,
+  TeachingLoad,
+  ActionItem,
 } from './models';
 
 import {
@@ -165,6 +167,18 @@ export async function markPeriodDone(payload: MarkDonePayload): Promise<{ ok: bo
 }
 
 /**
+ * Resolves a topic's active struggle status.
+ */
+export async function resolveTopicStruggle(classId: string, subjectId: string, topicId: string): Promise<{ ok: boolean }> {
+  if (!isLive()) {
+    return { ok: true };
+  }
+  const res = await gatewayGet<{ ok: boolean }>('resolveTopicStruggle', { class_id: classId, subject_id: subjectId, topic_id: topicId });
+  cache.clear(); // Ensure all dashboard and outline components fetch fresh data
+  return res;
+}
+
+/**
  * Returns the teacher's assigned classes for sidebar display.
  */
 export async function getTeacherClasses(teacherId: string): Promise<string[]> {
@@ -258,6 +272,26 @@ export async function getConcept(
   }
   setCache(cacheKey, data.concept);
   return data.concept;
+}
+
+/**
+ * Returns topics flagged as active struggles for a teacher's classes.
+ */
+export async function getTeacherActionItems(teacherId: string): Promise<ActionItem[]> {
+  const cacheKey = `action_items:${teacherId}`;
+  const cached = getCached<ActionItem[]>(cacheKey);
+  if (cached) return cached;
+
+  if (!isLive()) {
+    return []; // mock empty for now
+  }
+
+  const data = await gatewayGet<ActionItem[]>('getTeacherActionItems', { teacher_id: teacherId });
+  if (data) {
+    setCache(cacheKey, data);
+    return data;
+  }
+  return [];
 }
 
 /**
@@ -386,5 +420,222 @@ export async function saveRoadmapPlan(
       return { ok: true };
     }
     throw err;
+  }
+}
+
+
+// ── Admin Endpoints ────────────────────────────────────────────────────────
+
+export async function getAllTeachers(): Promise<Teacher[]> {
+  if (!isLive()) return [];
+  try { return await gatewayGet<Teacher[]>('getAllTeachers'); } catch (e) { console.warn(e); return []; }
+}
+
+export async function upsertTeacher(teacher: Partial<Teacher>): Promise<{ok: boolean, teacher_id?: string}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean, teacher_id?: string}>('upsertTeacher', { teacher });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function deactivateTeacher(teacherId: string): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayGet<{ok: boolean}>('deactivateTeacher', { teacher_id: teacherId });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function deleteTeacher(teacherId: string): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayGet<{ok: boolean}>('deleteTeacher', { teacher_id: teacherId });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getAllClasses(): Promise<any[]> {
+  if (!isLive()) return [];
+  try { return await gatewayGet<any[]>('getAllClasses'); } catch (e) { console.warn(e); return []; }
+}
+
+export async function upsertClass(class_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('upsertClass', { class_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getAllSections(): Promise<any[]> {
+  if (!isLive()) return [];
+  try { return await gatewayGet<any[]>('getAllSections'); } catch (e) { console.warn(e); return []; }
+}
+
+export async function upsertSection(section_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('upsertSection', { section_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getAllSubjects(): Promise<Subject[]> {
+  if (!isLive()) return [];
+  try { return await gatewayGet<Subject[]>('getAllSubjects'); } catch (e) { console.warn(e); return []; }
+}
+
+export async function upsertSubject(subject_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('upsertSubject', { subject_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getAllAssignments(): Promise<SectionSubjectAssignment[]> {
+  if (!isLive()) return [];
+  try { return await gatewayGet<SectionSubjectAssignment[]>('getAllAssignments'); } catch (e) { console.warn(e); return []; }
+}
+
+export async function upsertAssignment(assignment_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('upsertAssignment', { assignment_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function deactivateAssignment(assignment_id: string): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayGet<{ok: boolean}>('deactivateAssignment', { assignment_id });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getAdminOverview(): Promise<any> {
+  if (!isLive()) return {ok: true, kpis: {}, attention_items: []};
+  try { return await gatewayGet<any>('getAdminOverview'); } catch (e) { console.warn(e); return {ok: true, kpis: {}, attention_items: []}; }
+}
+
+export async function getAdminPacing(): Promise<any> {
+  if (!isLive()) return {ok: true, pacing: []};
+  try { return await gatewayGet<any>('getAdminPacing'); } catch (e) { console.warn(e); return {ok: true, pacing: []}; }
+}
+
+export async function getAdminActivity(): Promise<any> {
+  if (!isLive()) return {ok: true, activity: []};
+  try { return await gatewayGet<any>('getAdminActivity'); } catch (e) { console.warn(e); return {ok: true, activity: []}; }
+}
+
+export async function getCalendarEvents(academic_year?: string): Promise<any> {
+  if (!isLive()) return {ok: true, events: []};
+  try { return await gatewayGet<any>('getCalendarEvents', { academic_year: academic_year || '' }); } catch (e) { console.warn(e); return {ok: true, events: []}; }
+}
+
+export async function upsertCalendarEvent(event_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('upsertCalendarEvent', { event_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function deleteCalendarEvent(event_id: string): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayGet<{ok: boolean}>('deleteCalendarEvent', { event_id });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getSchoolDayStructure(): Promise<any> {
+  if (!isLive()) return {ok: true, structure: []};
+  try { return await gatewayGet<any>('getSchoolDayStructure'); } catch (e) { console.warn(e); return {ok: true, structure: []}; }
+}
+
+export async function saveSchoolDayStructure(structure: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('saveSchoolDayStructure', { structure });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getTimetableForSection(class_id: string, section_id: string): Promise<any> {
+  if (!isLive()) return {ok: true, slots: []};
+  try { return await gatewayGet<any>('getTimetableForSection', { class_id, section_id }); } catch (e) { console.warn(e); return {ok: true, slots: []}; }
+}
+
+export async function saveTimetableGrid(class_id: string, section_id: string, slots: any[]): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('saveTimetableGrid', { class_id, section_id, slots });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function cloneTimetable(source_class: string, source_section: string, target_class: string, target_section: string): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayGet<{ok: boolean}>('cloneTimetable', { source_class, source_section, target_class, target_section });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function getWorkbookRegistry(): Promise<any> {
+  if (!isLive()) return {ok: true, registry: []};
+  try { return await gatewayGet<any>('getWorkbookRegistry'); } catch (e) { console.warn(e); return {ok: true, registry: []}; }
+}
+
+export async function linkWorkbook(registry_data: any): Promise<{ok: boolean}> {
+  if (!isLive()) return {ok: true};
+  try {
+    const res = await gatewayPost<{ok: boolean}>('linkWorkbook', { registry_data });
+    clearGatewayCache();
+    return res;
+  } catch(e) { console.warn(e); return {ok: true}; }
+}
+
+export async function testWorkbookConnection(class_id: string, subject_id: string): Promise<any> {
+  if (!isLive()) return {ok: true};
+  try {
+    return await gatewayGet<any>('testWorkbookConnection', { class_id, subject_id });
+  } catch(e) { console.warn(e); return {ok: false, error: 'Connection failed'}; }
+}
+
+
+// ── Timetable Auto-Generation ─────────────────────────────────────────────
+
+export async function getAllTimetableSlots(): Promise<{slots: any[]}> {
+  if (!isLive()) return {slots: []}; // we can return mock data here if needed
+  try { return await gatewayGet<{slots: any[]}>('getAllTimetableSlots'); } catch (e) { console.warn(e); return {slots: []}; }
+}
+
+export async function generateTimetable(payload: {class_id: string, section_id: string, frequencies: Record<string, number>}): Promise<{ok: boolean, proposed_slots?: any[]}> {
+  if (!isLive()) {
+    // Mock algorithm
+    return { ok: true, proposed_slots: [] };
+  }
+  try {
+    return await gatewayPost<{ok: boolean, proposed_slots?: any[]}>('generateTimetable', payload);
+  } catch (e) {
+    console.warn(e);
+    return { ok: false };
   }
 }

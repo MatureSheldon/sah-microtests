@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTeacher } from '../components/TeacherContext';
 import { ConceptViewerModal } from '../components/ConceptViewerModal';
 import { HomeworkViewer } from '../components/HomeworkViewer';
-import { getTeacherAssignments, getSubjectOutline } from '../lib/gateway';
+import { getTeacherAssignments, getSubjectOutline, resolveTopicStruggle } from '../lib/gateway';
 import type { TeacherAssignment, SubjectOutlineChapter, SubjectOutlineTopic } from '../lib/models';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,12 +34,41 @@ function TopicRow({
 }) {
   const navigate = useNavigate();
   const classLabel = classId.replace('CLASS_', '');
+  const [resolving, setResolving] = useState(false);
+  const [localStruggle, setLocalStruggle] = useState(topic.struggle_status);
+
+  useEffect(() => {
+    setLocalStruggle(topic.struggle_status);
+  }, [topic.struggle_status]);
+
+  const handleResolve = async () => {
+    if (!confirm('Have students understood this now? This will mark it as resolved.')) return;
+    setResolving(true);
+    try {
+      await resolveTopicStruggle(classId, subjectId, topic.topic_id);
+      setLocalStruggle('resolved');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to resolve topic struggle state.');
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const pills = [
     {
       label: '📋 Lesson Plan',
       available: topic.has_lesson_plan,
       onClick: () => navigate(`/chapters/${topic.topic_id}?classId=${classId}&subjectId=${subjectId}`),
+    },
+    {
+      label: '📚 Homework',
+      available: topic.has_homework,
+      onClick: () => {
+        if (setViewerHomeworkTopic) {
+          setViewerHomeworkTopic({ id: topic.topic_id, title: topic.topic_title || `Topic ${topic.sequence_no}` });
+        }
+      },
     },
     {
       label: '📊 Microtest',
@@ -55,8 +84,28 @@ function TopicRow({
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-3 border-b border-slate-100 last:border-0 group">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{topic.topic_title || `Topic ${topic.sequence_no}`}</p>
+      <div className="flex-1 min-w-0 pr-4">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm font-medium text-slate-800 truncate">{topic.topic_title || `Topic ${topic.sequence_no}`}</p>
+          {localStruggle === 'active' && (
+            <button 
+              onClick={handleResolve}
+              disabled={resolving}
+              title="Students struggled. Click to resolve."
+              className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors border border-rose-200 shadow-sm"
+            >
+              ⚠️ Class Struggled
+            </button>
+          )}
+          {localStruggle === 'resolved' && (
+            <span 
+              title="Students previously struggled but it is resolved."
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200"
+            >
+              🩹 Previously difficult
+            </span>
+          )}
+        </div>
         <p className="text-xs text-slate-400 mt-0.5">{topic.planned_periods} period{topic.planned_periods !== 1 ? 's' : ''}</p>
       </div>
       <div className="flex flex-wrap gap-1.5 shrink-0 mt-2 sm:mt-0">
@@ -98,6 +147,7 @@ function ChapterCard({
   subjectId: string;
   defaultOpen: boolean;
   setViewerChapter: (v: { id: string; title: string }) => void;
+  setViewerHomeworkTopic: (v: { id: string; title: string }) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const available = chapter.topics.filter((t) => t.has_lesson_plan || t.has_concept || t.has_homework).length;
@@ -158,6 +208,7 @@ function ChapterCard({
                 topic={t} 
                 classId={classId} 
                 subjectId={subjectId} 
+                setViewerHomeworkTopic={setViewerHomeworkTopic}
               />
             ))
           )}
@@ -186,6 +237,7 @@ export function ChapterLibrary() {
 
   // Modals State
   const [viewerChapter, setViewerChapter] = useState<{ id: string, title: string } | null>(null);
+  const [viewerHomeworkTopic, setViewerHomeworkTopic] = useState<{ id: string, title: string } | null>(null);
 
   // Load teacher assignments
   useEffect(() => {
@@ -362,6 +414,7 @@ export function ChapterLibrary() {
               subjectId={selectedSubjectId}
               defaultOpen={i === 0}
               setViewerChapter={setViewerChapter}
+              setViewerHomeworkTopic={setViewerHomeworkTopic}
             />
           ))}
         </div>
@@ -374,6 +427,16 @@ export function ChapterLibrary() {
           chapterId={viewerChapter.id}
           chapterTitle={viewerChapter.title}
           onClose={() => setViewerChapter(null)}
+        />
+      )}
+
+      {viewerHomeworkTopic && (
+        <HomeworkViewer
+          classId={selectedClassId}
+          subjectId={selectedSubjectId}
+          topicId={viewerHomeworkTopic.id}
+          topicTitle={viewerHomeworkTopic.title}
+          onClose={() => setViewerHomeworkTopic(null)}
         />
       )}
     </div>

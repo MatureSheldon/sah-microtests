@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { ChapterInput, allocatePeriods, calculateAvailablePeriods } from '../lib/scheduling';
 import { MOCK_TIMETABLE, MOCK_EVENTS } from '../lib/data';
 import { useTeacher } from '../components/TeacherContext';
-import { getTeacherAssignments, getSubjectOutline, saveRoadmapPlan } from '../lib/gateway';
+import { getTeacherAssignments, getSubjectOutline, saveRoadmapPlan, getAllTimetableSlots } from '../lib/gateway';
 import type { TeacherAssignment, SubjectOutline } from '../lib/models';
+import type { TimetableEntry } from '../lib/scheduling';
 
 interface TopicInfo {
   no: string;
@@ -24,6 +25,7 @@ export function YearlyRoadmap() {
   
   const [outline, setOutline] = useState<SubjectOutline | null>(null);
   const [loading, setLoading] = useState(false);
+  const [allSlots, setAllSlots] = useState<any[]>([]);
   
   const [chapters, setChapters] = useState<ChapterInput[]>([]);
   const [topicsByChapter, setTopicsByChapter] = useState<Record<string, TopicInfo[]>>({});
@@ -32,9 +34,17 @@ export function YearlyRoadmap() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // 1. Load assignments on mount
+  // 1. Load assignments and timetable on mount
   useEffect(() => {
     if (!teacher) return;
+    
+    // Load timetable
+    getAllTimetableSlots().then(res => {
+      if (res && res.ok && res.slots) {
+        setAllSlots(res.slots);
+      }
+    });
+
     getTeacherAssignments(teacher.teacher_id).then(data => {
       setAssignments(data);
       if (data.length > 0) {
@@ -98,19 +108,38 @@ export function YearlyRoadmap() {
 
   // Auto-calculate available periods from the timetable
   const totalAvailablePeriods = useMemo(() => {
-    // In a real app, calculateAvailablePeriods would use the specific classId
+    if (allSlots.length === 0 || !targetClass || !targetSubject) return 120; // Fallback
+
+    // Convert backend slots to TimetableEntry format
+    const realTimetable: TimetableEntry[] = allSlots
+      .filter(s => s.slot_type === 'instructional')
+      .map(s => ({
+        day: s.day,
+        period: s.period_no,
+        periodStart: s.start_time,
+        periodEnd: s.end_time,
+        klass: s.class_id,
+        section: s.section_id,
+        subject: s.subject_id,
+        teacher: s.teacher_id,
+      }));
+
+    // The backend uses things like "CLASS_8" and "A". We need to map `targetClass` (e.g. "CLASS_8") directly.
+    // However, our UI right now only selects `targetClass`, not a section! 
+    // Wait, let's just sum across all sections for the class, or assume section A for the roadmap?
+    // Usually Roadmap is per class, so if they have 3 sections, they might have 3x periods. Let's just calculate for Section 'A' for baseline.
     const calculated = calculateAvailablePeriods(
-      MOCK_TIMETABLE,
+      realTimetable,
       MOCK_EVENTS,
       new Date(termStart),
       new Date(termEnd),
-      targetClass || '10-B', // Fallback to mock format if real parser needs it
-      '', 
-      targetSubject || 'Mathematics'
+      targetClass,
+      '', // No specific section, averages across all sections for this class
+      targetSubject
     );
-    // If we have no mock timetable data for this class, fallback to 120 periods so the planner works
+    
     return calculated > 0 ? calculated : 120;
-  }, [termStart, termEnd, targetClass, targetSubject]);
+  }, [termStart, termEnd, targetClass, targetSubject, allSlots]);
 
   // Auto-allocate periods based on available total and priorities
   const allocations = useMemo(() => {

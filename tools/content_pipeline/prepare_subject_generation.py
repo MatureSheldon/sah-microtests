@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
-from validate_subject_workbook import REQUIRED_FILES
+from validate_subject_workbook import ALL_FILES, REQUIRED_FILES
 
 
 SUPPORTED_SOURCE_EXTENSIONS = {".md", ".txt", ".pdf"}
@@ -167,7 +167,7 @@ def discover_sources(source_dir: Path, exclude_patterns: list[str], renumber_seq
 def write_empty_csvs(subject_workbook_dir: Path, force: bool) -> list[str]:
     created: list[str] = []
     subject_workbook_dir.mkdir(parents=True, exist_ok=True)
-    for _sheet_name, (file_name, headers) in REQUIRED_FILES.items():
+    for _sheet_name, (file_name, headers) in ALL_FILES.items():
         path = subject_workbook_dir / file_name
         if path.exists() and not force:
             continue
@@ -236,7 +236,7 @@ Source file: {chapter.source_path}
 
 - Read the full source chapter before writing final rows.
 - Use the source as the truth; do not add out-of-syllabus facts unless clearly useful as a local example.
-- Create 6-10 teachable topics unless the chapter genuinely needs a different count.
+- Extract the chapter's actual teachable topics. Do not force a fixed count; use fewer or more when coverage demands it.
 - Every concept must explain one must-have idea in teacher-friendly language.
 - Misconceptions must be complete corrective points, preferably newline-separated.
 - Homework must be exploratory and untimed: observe, draw, compare, classify, explain, justify, measure, model, investigate, interview, design, or reflect.
@@ -244,6 +244,9 @@ Source file: {chapter.source_path}
 - Add Mermaid or SVG assets only where they deepen understanding.
 - Use SVG for spatial/scientific/mathematical diagrams; use Mermaid for flows, cycles, trees, timelines, and relationships.
 - Same-row assets only: asset_format/asset_data for Homework and Asset Format/Asset Data for Questions.
+- Add mastery bands: Must Know, Should Know, or Stretch.
+- Include worked examples for important solved-problem patterns.
+- Set review fields to ai_reviewed initially; teacher approval happens later.
 
 ## Required Output
 
@@ -256,6 +259,8 @@ Return one valid JSON object. The object must contain these exact array fields:
 - Homework.csv
 - Resources.csv
 - Questions.csv
+- Worked_Examples.csv
+- Teacher_Review.csv
 
 Use these JSON keys, without `.csv`:
 
@@ -274,7 +279,9 @@ Use these JSON keys, without `.csv`:
   "Concepts": [],
   "Homework": [],
   "Resources": [],
-  "Questions": []
+  "Questions": [],
+  "Worked_Examples": [],
+  "Teacher_Review": []
 }}
 ```
 

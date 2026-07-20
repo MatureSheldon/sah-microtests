@@ -72,9 +72,17 @@ export function calculateAvailablePeriods(
   targetSubject: string
 ): number {
   // 1. Find the weekly schedule for this specific target
-  const weeklySchedule = timetable.filter(
-    (e) => e.klass === targetClass && e.section === targetSection && e.subject === targetSubject
+  let weeklySchedule = timetable.filter(
+    (e) => e.klass === targetClass && e.subject === targetSubject
   );
+  
+  if (targetSection) {
+    weeklySchedule = weeklySchedule.filter(e => e.section === targetSection);
+  }
+
+  // Find number of unique sections we are calculating for
+  const uniqueSections = new Set(weeklySchedule.map(e => e.section));
+  const sectionCount = uniqueSections.size || 1;
 
   // Map of Day -> count of periods
   const periodsPerDay: Record<string, number> = {
@@ -86,6 +94,11 @@ export function calculateAvailablePeriods(
       periodsPerDay[e.day]++;
     }
   });
+
+  // Average periods per day per section
+  for (const day in periodsPerDay) {
+    periodsPerDay[day] = periodsPerDay[day] / sectionCount;
+  }
 
   let totalAvailable = 0;
 
@@ -108,7 +121,7 @@ export function calculateAvailablePeriods(
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  return totalAvailable;
+  return Math.round(totalAvailable);
 }
 
 /**

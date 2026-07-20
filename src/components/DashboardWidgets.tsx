@@ -1,39 +1,43 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTeacher } from './TeacherContext';
 import { getTeachingLoad } from '../lib/gateway';
 
-export function AdminCard() {
-  return (
-    <div className="p-8 bg-slate-900 text-white rounded-3xl relative overflow-hidden">
-      <div className="relative z-10">
-        <h3 className="text-xl font-bold mb-2">Administrative Setup</h3>
-        <p className="text-slate-400 text-sm mb-6">
-          Configure your teaching environment for the upcoming academic week.
-        </p>
+/* ─── Quick Links Card (replaces old AdminCard) ──────────────────────────── */
 
-        <div className="space-y-3">
-          <AdminRow color="bg-amber-400" label="Upload Class Timetable (CSV)" meta="Last sync: 2d ago" />
-          <AdminRow color="bg-brand-accent" label="Mark School Holidays" meta="Next: Oct 31" />
-          <AdminRow color="bg-emerald-400" label="Set Exam Dates" meta="Mid-term in 12 days" />
-          <AdminRow color="bg-rose-400" label="Set Chapter Priorities" meta="3 chapters flagged" />
+export function QuickLinksCard() {
+  const links = [
+    { to: '/chapters', icon: '📚', label: 'Library', desc: 'Concepts & Plans' },
+    { to: '/microtests', icon: '📝', label: 'Microtest', desc: 'Build & Export' },
+    { to: '/timetable', icon: '📅', label: 'Timetable', desc: 'Full Week View' },
+  ];
+
+  return (
+    <div className="p-5 sm:p-6 bg-slate-900 text-white rounded-2xl relative overflow-hidden">
+      <div className="relative z-10">
+        <h3 className="text-base font-bold mb-4">Quick Access</h3>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {links.map(link => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/15 active:scale-95 transition-all text-center"
+            >
+              <span className="text-xl sm:text-2xl">{link.icon}</span>
+              <div>
+                <p className="text-xs sm:text-sm font-semibold">{link.label}</p>
+                <p className="text-[10px] text-slate-400 hidden sm:block">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
-      <div className="absolute -bottom-10 -right-10 size-48 bg-brand-accent/20 rounded-full blur-3xl" />
+      <div className="absolute -bottom-10 -right-10 size-40 bg-brand-accent/20 rounded-full blur-3xl" />
     </div>
   );
 }
 
-function AdminRow({ color, label, meta }: { color: string; label: string; meta: string }) {
-  return (
-    <button className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className={`size-2 rounded-full ${color}`} />
-        <span className="text-sm font-medium">{label}</span>
-      </div>
-      <span className="text-xs text-slate-400">{meta}</span>
-    </button>
-  );
-}
+/* ─── Teaching Load Card ─────────────────────────────────────────────────── */
 
 export function LoadCard() {
   const { teacher } = useTeacher();
@@ -56,11 +60,11 @@ export function LoadCard() {
   const peakDay = loadDays.find(ld => ld.periods === maxPeriods)?.day || '';
 
   return (
-    <div className="p-8 border border-border-subtle bg-white rounded-3xl">
+    <div className="p-5 sm:p-6 border border-border-subtle bg-white rounded-2xl">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-xl font-bold">Teaching Load Analysis</h3>
-          <p className="text-sm text-slate-500">Periods per day this week</p>
+          <h3 className="text-base font-bold">Weekly Load</h3>
+          <p className="text-xs text-slate-500">Periods per day</p>
         </div>
         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded uppercase tracking-wider">
           {maxPeriods > 6 ? 'Heavy' : 'Balanced'}
@@ -68,12 +72,12 @@ export function LoadCard() {
       </div>
       <div className="space-y-4">
         {loading ? (
-          <div className="h-36 pt-4 flex items-center justify-center text-sm text-slate-400">Loading analysis...</div>
+          <div className="h-28 pt-4 flex items-center justify-center text-sm text-slate-400">Loading...</div>
         ) : (
           <>
-            <div className="flex items-end gap-3 h-36 pt-4">
+            <div className="flex items-end gap-2 sm:gap-3 h-28 pt-4">
               {loadDays.map((d) => (
-                <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
                   <div
                     className={
                       d.periods === maxPeriods
@@ -86,7 +90,7 @@ export function LoadCard() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               {loadDays.map((d) => (
                 <span
                   key={d.day}
@@ -97,9 +101,8 @@ export function LoadCard() {
               ))}
             </div>
             {maxPeriods >= 6 && (
-              <p className="text-xs text-slate-500 mt-4 leading-relaxed italic border-l-2 border-brand-accent/30 pl-3">
-                "Peak teaching load detected for {peakDay} ({maxPeriods} periods). Ensure all lesson plans
-                are pre-synced for offline use before {peakDay === 'Mon' ? 'Sunday' : 'the previous'} evening."
+              <p className="text-xs text-slate-500 mt-3 leading-relaxed italic border-l-2 border-brand-accent/30 pl-3">
+                Peak load on {peakDay} ({maxPeriods} periods). Ensure lesson plans are pre-synced.
               </p>
             )}
           </>

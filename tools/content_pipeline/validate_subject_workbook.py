@@ -36,13 +36,14 @@ from typing import Iterable
 
 
 CHAPTER_MAP_HEADERS = ["chapter_id", "chapter_no", "chapter_title", "default_priority", "status"]
-TOPIC_MAP_HEADERS = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status"]
+TOPIC_MAP_HEADERS = ["topic_id", "chapter_id", "sequence_no", "topic_title", "relative_weight", "relative_difficulty", "learning_outcomes", "status", "struggle_status", "historical_difficulty", "mastery_band", "prerequisite_topic_ids", "teacher_review_status"]
 LESSON_PLANS_HEADERS = ["lesson_plan_id", "chapter_id", "topic_id", "objectives", "phase_engage", "phase_explore", "phase_explain", "phase_elaborate", "phase_evaluate", "required_resources", "notes"]
-CONCEPTS_HEADERS = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes"]
+CONCEPTS_HEADERS = ["concept_id", "chapter_id", "topic_id", "concept_title", "explanation", "key_formulas", "misconceptions", "visual_type", "visual_data", "notes", "local_example", "teacher_review_status"]
 HOMEWORK_HEADERS = [
     "homework_id", "chapter_id", "topic_id", "set_title", "sequence_no",
     "question_text", "marks", "difficulty", "answer", "explanation", "status",
     "asset_format", "asset_data", "asset_placement", "asset_width", "asset_height",
+    "homework_kind", "estimated_minutes", "core_concept_coverage",
 ]
 RESOURCES_HEADERS = ["resource_id", "chapter_id", "topic_id", "resource_type", "title", "url", "description", "status"]
 QUESTIONS_HEADERS = [
@@ -53,6 +54,19 @@ QUESTIONS_HEADERS = [
     "PYQ Board/Exam", "PYQ Paper/Set", "Use in Papers", "Times Asked",
     "Last Asked Date", "Last Paper ID", "Last Updated", "Notes", "Image URL",
     "Asset Format", "Asset Data", "Asset Placement", "Asset Width", "Asset Height",
+    "Cognitive Skill", "Mastery Band", "Revision Link", "Quality Tags",
+]
+
+
+WORKED_EXAMPLES_HEADERS = [
+    "worked_example_id", "chapter_id", "topic_id", "example_title", "problem",
+    "step_by_step_solution", "answer", "common_mistake", "teacher_note",
+    "visual_type", "visual_data", "status",
+]
+
+TEACHER_REVIEW_HEADERS = [
+    "review_id", "scope_type", "scope_id", "chapter_id", "topic_id",
+    "review_status", "quality_score", "reviewer", "review_notes", "last_reviewed",
 ]
 
 REQUIRED_FILES = {
@@ -65,6 +79,13 @@ REQUIRED_FILES = {
     "Questions": ("Questions.csv", QUESTIONS_HEADERS),
 }
 
+OPTIONAL_FILES = {
+    "Worked_Examples": ("Worked_Examples.csv", WORKED_EXAMPLES_HEADERS),
+    "Teacher_Review": ("Teacher_Review.csv", TEACHER_REVIEW_HEADERS),
+}
+
+ALL_FILES = {**REQUIRED_FILES, **OPTIONAL_FILES}
+
 MERMAID_STARTS = (
     "flowchart", "graph", "sequenceDiagram", "stateDiagram", "classDiagram",
     "erDiagram", "gantt", "journey", "gitGraph", "mindmap", "timeline", "pie",
@@ -74,8 +95,11 @@ SPATIAL_KEYWORDS = {
     "sun", "earth", "moon", "planet", "orbit", "phase", "eclipse", "mirror",
     "lens", "ray", "reflection", "force", "pressure", "circuit", "current",
     "electromagnet", "particle", "solid", "liquid", "gas", "density", "float",
-    "sink", "volume", "number line", "coordinate", "graph", "angle", "triangle",
-    "circle", "area", "perimeter", "construction", "map", "grid",
+    "sink", "volume", "cube", "cuboid", "layer", "power line", "number line",
+    "coordinate", "graph", "table", "growth", "division", "divisibility",
+    "digit", "ratio", "proportion", "proportional", "algebra", "algebraic",
+    "expression", "equation", "angle", "triangle", "circle", "area",
+    "perimeter", "construction", "map", "grid",
 }
 
 FLOW_KEYWORDS = {
@@ -92,6 +116,9 @@ EXPLORATORY_VERBS = {
 GENERIC_CONCEPT_PHRASES = {
     "this concept is important", "students will learn", "in this topic",
     "this section covers", "introduction to", "advanced applications",
+    "ask students to make one classroom or home example",
+    "use a simple classroom example",
+    "create and solve one representative classroom problem",
 }
 
 
@@ -160,6 +187,28 @@ def starts_like_mermaid(value: str) -> bool:
     return any(text.startswith(prefix) for prefix in MERMAID_STARTS)
 
 
+GEOJSON_BASE_MAP_IDS = {"world-outline", "india-outline", "india-political"}
+
+
+def starts_like_geojson(value: str) -> bool:
+    text = cell(value)
+    normalized = text.lower().replace("_", "-")
+    if normalized in GEOJSON_BASE_MAP_IDS:
+        return True
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    if isinstance(data, str):
+        return data.lower().replace("_", "-") in GEOJSON_BASE_MAP_IDS
+    if not isinstance(data, dict):
+        return False
+    if data.get("type") in {"FeatureCollection", "Feature", "Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon", "GeometryCollection"}:
+        return True
+    base_map = str(data.get("base_map") or data.get("baseMap") or "").lower().replace("_", "-")
+    return base_map in GEOJSON_BASE_MAP_IDS
+
+
 def parse_int(value: str, default: int = 0) -> int:
     try:
         return int(float(cell(value)))
@@ -169,10 +218,11 @@ def parse_int(value: str, default: int = 0) -> int:
 
 def load_subject(source_dir: Path, report: Report) -> dict[str, list[dict[str, str]]]:
     data: dict[str, list[dict[str, str]]] = {}
-    for sheet, (filename, expected_header) in REQUIRED_FILES.items():
+    for sheet, (filename, expected_header) in ALL_FILES.items():
         path = source_dir / filename
         if not path.exists():
-            report.add("error", "schema", filename, "Required CSV is missing.")
+            if sheet in REQUIRED_FILES:
+                report.add("error", "schema", filename, "Required CSV is missing.")
             data[sheet] = []
             continue
         header, rows, raw_rows = read_csv(path)
@@ -216,6 +266,8 @@ def validate_schema(data: dict[str, list[dict[str, str]]], report: Report) -> No
         ("Homework", [r.get("homework_id", "") for r in data["Homework"]], "homework_id"),
         ("Resources", [r.get("resource_id", "") for r in data["Resources"]], "resource_id"),
         ("Questions", [r.get("Question ID", "") for r in data["Questions"]], "Question ID"),
+        ("Worked_Examples", [r.get("worked_example_id", "") for r in data.get("Worked_Examples", [])], "worked_example_id"),
+        ("Teacher_Review", [r.get("review_id", "") for r in data.get("Teacher_Review", [])], "review_id"),
     ]:
         counts = Counter(values)
         for value, count in counts.items():
@@ -251,7 +303,7 @@ def validate_schema(data: dict[str, list[dict[str, str]]], report: Report) -> No
         if cell(row.get("Use in Papers")).lower() not in {"yes", "y", "true", "1"}:
             report.add("warning", "schema", f"Questions:row{idx}", "Use in Papers should be Yes for usable question-bank rows.")
 
-    report.stats["rows"] = {sheet: len(rows) for sheet, rows in data.items()}
+    report.stats["rows"] = {sheet: len(rows) for sheet, rows in data.items() if sheet in REQUIRED_FILES or rows}
 
 
 def validate_concepts(data: dict[str, list[dict[str, str]]], report: Report) -> None:
@@ -280,6 +332,13 @@ def validate_concepts(data: dict[str, list[dict[str, str]]], report: Report) -> 
         lower = explanation.lower()
         if any(phrase in lower for phrase in GENERIC_CONCEPT_PHRASES):
             report.add("warning", "concept-quality", cid, "Explanation contains generic placeholder-like phrasing.")
+        local_example = cell(row.get("local_example"))
+        local_lower = local_example.lower()
+        if "local_example" in row:
+            if len(local_example.split()) < 18:
+                report.add("warning", "concept-quality", cid, "local_example is too thin for classroom use.")
+            if any(phrase in local_lower for phrase in GENERIC_CONCEPT_PHRASES):
+                report.add("warning", "concept-quality", cid, "local_example is generic; make it varied and thought-provoking.")
 
 
 def validate_misconceptions(data: dict[str, list[dict[str, str]]], report: Report) -> None:
@@ -301,11 +360,19 @@ def validate_misconceptions(data: dict[str, list[dict[str, str]]], report: Repor
                 report.add("warning", "misconceptions", cid, f"Misconception may be a sentence fragment: {point!r}.")
 
 
+def contains_keyword(text: str, keywords: Iterable[str]) -> bool:
+    for keyword in keywords:
+        pattern = r"(?<![a-z0-9])" + re.escape(keyword.lower()) + r"(?![a-z0-9])"
+        if re.search(pattern, text):
+            return True
+    return False
+
+
 def expected_visual_format(text: str) -> str | None:
     lower = text.lower()
-    if any(keyword in lower for keyword in SPATIAL_KEYWORDS):
+    if contains_keyword(lower, SPATIAL_KEYWORDS):
         return "svg"
-    if any(keyword in lower for keyword in FLOW_KEYWORDS):
+    if contains_keyword(lower, FLOW_KEYWORDS):
         return "mermaid"
     return None
 
@@ -321,12 +388,14 @@ def check_asset(format_value: str, data_value: str, location: str, report: Repor
         return
     if not fmt:
         return
-    if fmt not in {"mermaid", "svg"}:
-        report.add("warning", validator, location, f"Unknown asset format {fmt!r}; expected mermaid or svg.")
+    if fmt not in {"mermaid", "svg", "geojson"}:
+        report.add("warning", validator, location, f"Unknown asset format {fmt!r}; expected mermaid, svg, or geojson.")
     if fmt == "svg" and not starts_like_svg(data):
         report.add("error", validator, location, "SVG asset does not look like complete <svg>...</svg> markup.")
     if fmt == "mermaid" and not starts_like_mermaid(data):
         report.add("warning", validator, location, "Mermaid asset does not start with a known Mermaid diagram type.")
+    if fmt == "geojson" and not starts_like_geojson(data):
+        report.add("error", validator, location, "GeoJSON asset is not valid GeoJSON markup or a supported base-map reference.")
 
 
 def validate_visual_assets(data: dict[str, list[dict[str, str]]], report: Report) -> None:
@@ -342,7 +411,7 @@ def validate_visual_assets(data: dict[str, list[dict[str, str]]], report: Report
             concept_formats[fmt] += 1
         check_asset(fmt, visual, loc, report)
         expected = expected_visual_format(" ".join([row.get("concept_title", ""), row.get("explanation", ""), row.get("topic_id", "")]))
-        if expected and fmt and fmt != expected:
+        if expected and fmt and fmt != expected and not (expected == "svg" and fmt == "geojson"):
             report.add("warning", "visual-assets", loc, f"Visual may be better as {expected!r} than {fmt!r}.")
 
     for row in data["Questions"]:
@@ -356,7 +425,7 @@ def validate_visual_assets(data: dict[str, list[dict[str, str]]], report: Report
         if fmt and image_url and not asset:
             report.add("warning", "visual-assets", loc, "Question uses Image URL without inline Asset Data; app rendering may depend on external access.")
         expected = expected_visual_format(" ".join([row.get("Topic", ""), row.get("Subtopic", ""), row.get("Question", "")]))
-        if expected and fmt and fmt != expected:
+        if expected and fmt and fmt != expected and not (expected == "svg" and fmt == "geojson"):
             report.add("warning", "visual-assets", loc, f"Question visual may be better as {expected!r} than {fmt!r}.")
 
     for row in data["Homework"]:
@@ -367,7 +436,7 @@ def validate_visual_assets(data: dict[str, list[dict[str, str]]], report: Report
             homework_formats[fmt] += 1
         check_asset(fmt, asset, loc, report)
         expected = expected_visual_format(" ".join([row.get("set_title", ""), row.get("question_text", "")]))
-        if expected and fmt and fmt != expected:
+        if expected and fmt and fmt != expected and not (expected == "svg" and fmt == "geojson"):
             report.add("warning", "visual-assets", loc, f"Homework visual may be better as {expected!r} than {fmt!r}.")
 
     report.stats["visual_formats"] = {
@@ -434,6 +503,11 @@ def validate_question_bank(data: dict[str, list[dict[str, str]]], report: Report
         marks = parse_int(row.get("Marks", "0"))
         if len(question.split()) < 6:
             report.add("warning", "question-bank", qid, "Question text is very short.")
+        context_markers = ("student", "teacher", "class", "activity", "situation", "diagram", "table", "grid", "case", "data", "map", "model", "given", "shown", "draw", "use")
+        if qtype != "Very Short Answer" and len(question.split()) < 14:
+            report.add("warning", "question-bank", qid, "Question may be too context-thin for a standalone microtest.")
+        if qtype in {"MCQ", "Short Answer", "Case/Source-Based", "Long Answer"} and not any(marker in question.lower() for marker in context_markers):
+            report.add("warning", "question-bank", qid, "Question lacks standalone classroom context.")
         if marks <= 0:
             report.add("error", "question-bank", qid, "Marks must be positive.")
         if not answer:
@@ -455,6 +529,46 @@ def validate_question_bank(data: dict[str, list[dict[str, str]]], report: Report
         ch: dict(Counter(r.get("Question Type", "") for r in rows))
         for ch, rows in sorted(questions_by_chapter.items(), key=lambda item: parse_int(item[0]))
     }
+
+
+def validate_quality_metadata(data: dict[str, list[dict[str, str]]], report: Report) -> None:
+    allowed_mastery = {"", "Must Know", "Should Know", "Stretch"}
+    allowed_review = {"", "ai_reviewed", "needs_human_review", "teacher_approved", "revision_needed"}
+    topic_ids = {cell(row.get("topic_id")) for row in data["Topic_Map"]}
+    chapter_ids = {cell(row.get("chapter_id")) for row in data["Chapter_Map"]}
+
+    for row in data["Topic_Map"]:
+        tid = cell(row.get("topic_id"))
+        if cell(row.get("mastery_band")) not in allowed_mastery:
+            report.add("warning", "quality-metadata", tid, "mastery_band should be Must Know, Should Know, Stretch, or blank.")
+        if cell(row.get("teacher_review_status")) not in allowed_review:
+            report.add("warning", "quality-metadata", tid, "teacher_review_status should use the standard review states.")
+        for prereq in [part.strip() for part in cell(row.get("prerequisite_topic_ids")).split(";") if part.strip()]:
+            if prereq not in topic_ids:
+                report.add("warning", "quality-metadata", tid, f"prerequisite topic {prereq!r} not found in Topic_Map.")
+
+    for row in data.get("Worked_Examples", []):
+        wid = cell(row.get("worked_example_id"))
+        if cell(row.get("chapter_id")) not in chapter_ids:
+            report.add("error", "worked-examples", wid, "chapter_id not found in Chapter_Map.")
+        if cell(row.get("topic_id")) not in topic_ids:
+            report.add("error", "worked-examples", wid, "topic_id not found in Topic_Map.")
+        problem = cell(row.get("problem"))
+        solution = cell(row.get("step_by_step_solution"))
+        if len(solution.split()) < 12:
+            report.add("warning", "worked-examples", wid, "step_by_step_solution is too thin.")
+        if any(phrase in problem.lower() for phrase in GENERIC_CONCEPT_PHRASES):
+            report.add("warning", "worked-examples", wid, "problem is generic; use a concrete classroom scenario.")
+        if "step 1" not in solution.lower() or "check" not in solution.lower():
+            report.add("warning", "worked-examples", wid, "worked example should include explicit steps and a check.")
+        check_asset(row.get("visual_type", ""), row.get("visual_data", ""), wid, report, "worked-examples")
+
+    review_rows = data.get("Teacher_Review", [])
+    if review_rows:
+        for row in review_rows:
+            rid = cell(row.get("review_id"))
+            if cell(row.get("review_status")) not in allowed_review:
+                report.add("warning", "teacher-review", rid, "review_status should use the standard review states.")
 
 
 def render_markdown(report: Report) -> str:
@@ -507,6 +621,7 @@ def run(source_dir: Path) -> Report:
     validate_visual_assets(data, report)
     validate_homework(data, report)
     validate_question_bank(data, report)
+    validate_quality_metadata(data, report)
     return report
 
 

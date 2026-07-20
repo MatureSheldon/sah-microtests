@@ -3,10 +3,12 @@ import type { DashboardPeriod } from '../lib/models';
 import { useState } from 'react';
 import { MarkDoneDialog } from './MarkDoneDialog';
 import { HomeworkViewer } from './HomeworkViewer';
+import { ConceptViewerModal } from './ConceptViewerModal';
 
-export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
+export function ActivePeriodCard({ period, onRefresh }: { period: DashboardPeriod, onRefresh?: () => void }) {
   const [markDoneOpen, setMarkDoneOpen] = useState(false);
   const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const [conceptOpen, setConceptOpen] = useState(false);
   const r = period.resources;
 
   return (
@@ -55,7 +57,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
               label="Concept" 
               cta={r.has_concept_map ? 'Open Map' : 'Not available'}
               disabled={!r.has_concept_map}
-              to={r.has_concept_map ? `/concepts/${period.topic_id}?classId=${period.slot.class_id}&subjectId=${period.slot.subject_id}` : undefined}
+              onClick={r.has_concept_map ? () => setConceptOpen(true) : undefined}
             />
             <ResourceTile 
               label="Homework" 
@@ -99,7 +101,7 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
       {markDoneOpen && (
         <MarkDoneDialog 
           period={period} 
-          onClose={() => setMarkDoneOpen(false)} 
+          onClose={() => { setMarkDoneOpen(false); onRefresh?.(); }} 
         />
       )}
 
@@ -110,6 +112,15 @@ export function ActivePeriodCard({ period }: { period: DashboardPeriod }) {
           topicId={period.topic_id}
           topicTitle={period.topic_title}
           onClose={() => setHomeworkOpen(false)} 
+        />
+      )}
+
+      {conceptOpen && (
+        <ConceptViewerModal 
+          classId={period.slot.class_id}
+          subjectId={period.slot.subject_id}
+          chapterId={period.chapter_id}
+          onClose={() => setConceptOpen(false)}
         />
       )}
     </>

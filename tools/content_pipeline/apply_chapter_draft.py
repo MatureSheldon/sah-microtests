@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
-from validate_subject_workbook import REQUIRED_FILES
+from validate_subject_workbook import ALL_FILES, REQUIRED_FILES
 
 
 ID_COLUMNS = {
@@ -23,6 +23,8 @@ ID_COLUMNS = {
     "Homework": "homework_id",
     "Resources": "resource_id",
     "Questions": "Question ID",
+    "Worked_Examples": "worked_example_id",
+    "Teacher_Review": "review_id",
 }
 
 
@@ -111,8 +113,10 @@ def apply_draft(subject_workbook_dir: Path, draft_path: Path, replace_chapter_id
 
     pending_writes: list[tuple[Path, list[str], list[dict[str, str]]]] = []
 
-    for sheet, (file_name, headers) in REQUIRED_FILES.items():
+    for sheet, (file_name, headers) in ALL_FILES.items():
         path = subject_workbook_dir / file_name
+        if sheet not in REQUIRED_FILES and not path.exists() and not draft_rows_for_sheet(draft, sheet):
+            continue
         existing, existing_signatures = read_existing(path, headers)
         incoming_raw = draft_rows_for_sheet(draft, sheet)
         incoming = [normalize_row(sheet, row, headers) for row in incoming_raw]
@@ -183,7 +187,7 @@ def write_template(path: Path) -> None:
             "generated_by": "AI draft",
         }
     }
-    for sheet in REQUIRED_FILES:
+    for sheet in ALL_FILES:
         template[sheet] = []
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(template, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

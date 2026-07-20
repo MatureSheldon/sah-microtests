@@ -38,6 +38,10 @@ SAH_HEADERS = [
     "Asset Placement",
     "Asset Width",
     "Asset Height",
+    "Cognitive Skill",
+    "Mastery Band",
+    "Revision Link",
+    "Quality Tags",
 ]
 
 QUESTIONS_SHEET_NAME = "Questions"

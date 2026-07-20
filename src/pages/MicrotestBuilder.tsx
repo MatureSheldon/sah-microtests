@@ -1,4 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTeacher } from '../components/TeacherContext';
+import { getTeacherActionItems, getSubjectOutline } from '../lib/gateway';
+import type { ActionItem, SubjectOutline } from '../lib/models';
 import { useMicrotestState } from '../hooks/useMicrotestState';
 import { useQuestionFiltering } from '../hooks/useQuestionFiltering';
 import { MicrotestConfigPanel } from '../components/microtest/MicrotestConfigPanel';
@@ -13,6 +16,24 @@ export function MicrotestBuilder() {
   const {
     activeQuestions, availableChapters, availableSubjects
   } = filtering;
+
+  const { teacher } = useTeacher();
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+
+  useEffect(() => {
+    if (teacher) {
+      getTeacherActionItems(teacher.teacher_id).then(setActionItems).catch(console.error);
+    }
+  }, [teacher?.teacher_id]);
+
+  const [outline, setOutline] = useState<SubjectOutline | null>(null);
+  useEffect(() => {
+    if (klass && subject) {
+      const classId = klass.includes('CLASS_') ? klass : `CLASS_${klass}`;
+      const subjectId = subject === 'Mathematics' ? 'MATH' : subject === 'Science' ? 'SCI' : subject;
+      getSubjectOutline(classId, subjectId).then(setOutline).catch(console.error);
+    }
+  }, [klass, subject]);
 
   const {
     klass, subject, setSubject, setChapters, chapters,
@@ -116,6 +137,18 @@ export function MicrotestBuilder() {
   }
   if (!state.bank) return null;
 
+  // Filter action items for current selection
+  const relevantActionItems = actionItems.filter(item => 
+    item.class_label === klass && 
+    (item.subject_id === subject || item.subject_id === 'MATH' && subject === 'Mathematics' || item.subject_id === 'SCI' && subject === 'Science') &&
+    chapters.some(c => c.num.toString() === item.chapter_id.replace('CH_', ''))
+  );
+
+  const resolvedTopics = outline?.topics.filter(t => 
+    t.struggle_status === 'resolved' && 
+    chapters.some(c => c.num.toString() === (t.chapter_id || '').replace('CH_', ''))
+  ) || [];
+
   return (
     <div className="max-w-[1600px] w-full grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8 items-start">
       <div className="flex flex-col gap-6">
@@ -123,6 +156,41 @@ export function MicrotestBuilder() {
         <ChapterWeightPanel state={extendedState} filtering={filtering} />
       </div>
       <div className="flex flex-col gap-6">
+        {relevantActionItems.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+            <span className="text-xl shrink-0 mt-0.5">💡</span>
+            <div>
+              <h4 className="text-sm font-bold text-orange-900 mb-1">Students are currently struggling with:</h4>
+              <ul className="text-sm text-orange-800 space-y-1 list-disc ml-4">
+                {relevantActionItems.map(item => (
+                  <li key={item.topic_id}>
+                    <span className="font-semibold">{item.topic_title}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-orange-700 mt-2 font-medium">Consider adding extra questions for these topics to check understanding.</p>
+            </div>
+          </div>
+        )}
+        {relevantActionItems.length === 0 && resolvedTopics.length > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+            <span className="text-xl shrink-0 mt-0.5">📝</span>
+            <div>
+              <h4 className="text-sm font-bold text-emerald-900 mb-1">Historically difficult topics in this selection:</h4>
+              <ul className="text-sm text-emerald-800 space-y-1 list-disc ml-4">
+                {resolvedTopics.slice(0, 3).map(item => (
+                  <li key={item.topic_id}>
+                    <span className="font-semibold">{item.topic_title || item.topic_id}</span>
+                  </li>
+                ))}
+                {resolvedTopics.length > 3 && (
+                  <li className="text-xs italic mt-1">...and {resolvedTopics.length - 3} more</li>
+                )}
+              </ul>
+              <p className="text-xs text-emerald-700 mt-2 font-medium">Good time to test their retention to ensure they've truly grasped it.</p>
+            </div>
+          </div>
+        )}
         <QuestionPreviewPanel state={extendedState} filtering={filtering} />
       </div>
     </div>

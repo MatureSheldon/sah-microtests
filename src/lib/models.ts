@@ -13,6 +13,8 @@ export interface Teacher {
   email: string;
   phone: string;
   status: 'active' | 'inactive';
+  capable_subjects?: string; // Comma separated subject IDs
+  capable_classes?: string;  // Comma separated class IDs
 }
 
 export interface ClassInfo {
@@ -234,6 +236,7 @@ export interface HomeworkSet {
   total_questions: number;
   estimated_minutes: number;
   status: 'active' | 'inactive';
+  struggle_status?: string;
 }
 
 export interface HomeworkItem {
@@ -245,6 +248,16 @@ export interface HomeworkItem {
   marks: number;
   difficulty: string;
   sequence_no: number;
+  topic_id?: string;
+  topic_title?: string;
+  answer?: string;
+  explanation?: string;
+  asset_format?: string;
+  asset_data?: string;
+  asset_placement?: string;
+  asset_width?: string | number;
+  asset_height?: string | number;
+  struggle_status?: string;
 }
 
 export interface HomeworkAssignment {
@@ -318,6 +331,7 @@ export interface DashboardPeriod {
   pacing: 'on-track' | 'behind' | 'ahead';
   resources: PeriodResourceFlags;
   is_content_available: boolean; // false for non-pilot classes
+  struggle_status?: 'active' | 'resolved' | '';
 }
 
 /** Full dashboard payload returned by the gateway. */
@@ -345,6 +359,7 @@ export interface MarkDonePayload {
   topic_ids_completed: string[];
   action_type: PeriodActionType;
   notes: string;
+  student_understanding?: 'Struggled' | 'Okay' | 'Got it' | '';
 }
 
 /** Gateway query for period context. */
@@ -404,6 +419,7 @@ export interface SubjectOutlineTopic {
   has_concept: boolean;
   has_homework: boolean;
   has_microtest: boolean;
+  struggle_status?: 'active' | 'resolved' | '';
 }
 
 /** A chapter with its topics in the subject outline. */
@@ -429,4 +445,103 @@ export interface TeacherAssignment {
   class_id: string;    // e.g. "CLASS_9"
   class_label: string; // e.g. "9"
   subject_id: string;  // e.g. "MATH"
+}
+
+export interface ActionItem {
+  class_id: string;
+  class_label: string;
+  subject_id: string;
+  chapter_id: string;
+  chapter_title: string;
+  topic_id: string;
+  topic_title: string;
+}
+
+
+export interface PacingEntry {
+  summary_id: string;
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  teacher_id: string;
+  current_chapter_id: string;
+  current_topic_id: string;
+  status: TopicStatus;
+  last_taught_date: string;
+}
+
+export interface ActivityEntry {
+  log_id: string;
+  date: string;
+  teacher_id: string;
+  class_id: string;
+  section_id: string;
+  subject_id: string;
+  action_type: PeriodActionType;
+  notes: string;
+  student_understanding: string;
+}
+
+export interface WorkbookHealth {
+  spreadsheet_id: string;
+  spreadsheet_name: string;
+  sheets_found: number;
+  sheets_total: number;
+  details: {
+    exists: string[];
+    missing: string[];
+  };
+}
+
+export interface CalendarEvent {
+  event_id: string;
+  academic_year: string;
+  event_type: CalendarEventType;
+  event_name: string;
+  start_date: string;
+  end_date: string;
+  scope: string;
+  class_ids: string;
+  section_ids: string;
+  affected_periods: string;
+  is_working_day: boolean;
+  is_instructional_day: boolean;
+  notes: string;
+  status: string;
+}
+
+export interface SchoolDayStructure {
+  period_no: number;
+  start_time: string;
+  end_time: string;
+  slot_type: SlotType;
+}
+
+export interface TimetableGridCell {
+  slot_id?: string;
+  academic_year?: string;
+  day: string;
+  period_no: number;
+  start_time: string;
+  end_time: string;
+  slot_type: SlotType;
+  class_id: string;
+  section_id: string;
+  subject_id?: string;
+  assignment_id?: string;
+  teacher_id?: string;
+  room_id?: string;
+  effective_from?: string;
+  effective_to?: string;
+  status?: string;
+}
+
+export interface AppRegistry {
+  registry_id: string;
+  academic_year: string;
+  class_id: string;
+  subject_id: string;
+  spreadsheet_id: string;
+  status: string;
+  last_synced: string;
 }

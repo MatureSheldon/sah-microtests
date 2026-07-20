@@ -9,8 +9,10 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
   // Form state
   const [actionType, setActionType] = useState<'mark_done' | 'revision_only' | 'period_not_taught' | 'skipped'>('mark_done');
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
+  const [rating, setRating] = useState<'Struggled' | 'Okay' | 'Got it' | ''>('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [aheadConfirmed, setAheadConfirmed] = useState(false);
 
   useEffect(() => {
@@ -44,11 +46,14 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
         chapter_id: context.progress.current_chapter_id,
         topic_ids_completed: actionType === 'mark_done' ? [selectedTopicId] : [],
         action_type: actionType,
-        notes
+        notes,
+        student_understanding: rating
       });
       clearGatewayCache();
-      // Optional: We could call a context/prop to force dashboard reload here
-      onClose();
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } catch (err) {
       console.error(err);
       alert('Failed to mark period as done.');
@@ -57,9 +62,9 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 sm:p-6">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-800">Close Period {period.slot.period_no}</h2>
             <p className="text-sm text-slate-500">{period.class_label}-{period.section_label} {period.subject_name}</p>
@@ -74,18 +79,18 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
         ) : !context ? (
           <div className="p-8 text-center text-rose-500">Failed to load context.</div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
             
             {/* Topic Selection */}
             {context.planned_topics.length > 0 ? (
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-700">Topic Coverage</label>
-                <div className="space-y-2">
+              <div className="space-y-3 flex flex-col min-h-0">
+                <label className="text-sm font-semibold text-slate-700 shrink-0">Topic Coverage</label>
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-2 border border-slate-100 rounded-lg p-2 bg-slate-50 shadow-inner">
                   {context.planned_topics.map(t => {
                     const isCurrent = t.topic_id === context.progress.current_topic_id;
                     const isSelected = selectedTopicId === t.topic_id;
                     return (
-                      <label key={t.topic_id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50 border-brand-accent' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                      <label key={t.topic_id} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50 border-brand-accent shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                         <input 
                           type="radio" 
                           name="topic" 
@@ -156,6 +161,18 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
               </div>
             </div>
 
+            {/* Student Understanding */}
+            {actionType === 'mark_done' && (
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-slate-700">Student Understanding</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <ActionRadio value="Struggled" current={rating} onChange={setRating} label="😞 Struggled" />
+                  <ActionRadio value="Okay" current={rating} onChange={setRating} label="😐 Okay" />
+                  <ActionRadio value="Got it" current={rating} onChange={setRating} label="🤩 Got it" />
+                </div>
+              </div>
+            )}
+
             {/* Notes */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Notes (Optional)</label>
@@ -167,30 +184,40 @@ export function MarkDoneDialog({ period, onClose }: { period: DashboardPeriod; o
               />
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <div className="flex gap-3 pt-6 border-t border-slate-100 mt-6 sticky bottom-0 bg-white shadow-[0_-12px_12px_-12px_rgba(0,0,0,0.1)]">
               <button 
                 type="button" 
                 onClick={onClose}
                 className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
-                disabled={submitting}
+                disabled={submitting || submitSuccess}
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
-                className="flex-1 py-2.5 bg-brand-primary text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
-                disabled={
-                  submitting || 
-                  (actionType === 'mark_done' && !selectedTopicId) ||
-                  (actionType === 'mark_done' && (() => {
-                    const currentTopicInPlan = context.planned_topics.find(t => t.topic_id === context.progress.current_topic_id) || context.planned_topics.find(t => t.status_type === 'current');
-                    const selectedTopicInPlan = context.planned_topics.find(t => t.topic_id === selectedTopicId);
-                    return currentTopicInPlan && selectedTopicInPlan && selectedTopicInPlan.sequence_no > currentTopicInPlan.sequence_no && !aheadConfirmed;
-                  })())
-                }
-              >
-                {submitting ? 'Submitting...' : 'Confirm & Close Period'}
-              </button>
+              {submitSuccess ? (
+                <button 
+                  type="button"
+                  disabled
+                  className="flex-1 py-2.5 bg-emerald-500 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 animate-in zoom-in-95"
+                >
+                  <span>✅</span> Success!
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 bg-brand-primary text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  disabled={
+                    submitting || 
+                    (actionType === 'mark_done' && !selectedTopicId) ||
+                    (actionType === 'mark_done' && (() => {
+                      const currentTopicInPlan = context.planned_topics.find(t => t.topic_id === context.progress.current_topic_id) || context.planned_topics.find(t => t.status_type === 'current');
+                      const selectedTopicInPlan = context.planned_topics.find(t => t.topic_id === selectedTopicId);
+                      return currentTopicInPlan && selectedTopicInPlan && selectedTopicInPlan.sequence_no > currentTopicInPlan.sequence_no && !aheadConfirmed;
+                    })())
+                  }
+                >
+                  {submitting ? 'Submitting...' : 'Confirm & Close Period'}
+                </button>
+              )}
             </div>
           </form>
         )}
