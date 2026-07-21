@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getChapterConcepts, getHomework } from '../lib/gateway';
 import type { Concept, HomeworkSet, HomeworkItem } from '../lib/models';
-import { renderMarkdownToHtml } from '../lib/utils';
+import { Markdown } from './Markdown';
 import { MermaidDiagram } from './MermaidDiagram';
 import { GeoJsonMap } from './GeoJsonMap';
 
@@ -96,7 +96,7 @@ function TopicHomework({ classId, subjectId, topicId }: { classId: string, subje
                 {item.marks} mark{item.marks !== 1 ? 's' : ''} • {item.difficulty}
               </span>
             </div>
-            <div className="text-sm text-slate-700 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.question_text) }} />
+            <Markdown text={item.question_text} className="text-sm text-slate-700 leading-relaxed font-medium" />
           </div>
         ))}
       </div>
@@ -220,10 +220,7 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                     <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
                       <span className="text-blue-500">📖</span> Explanation
                     </h3>
-                    <div 
-                      className="text-slate-600 leading-relaxed text-sm lg:text-base space-y-4"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(concept.explanation) }}
-                    />
+                    <Markdown text={concept.explanation} />
                   </div>
 
                   {/* Visual Map */}
@@ -261,8 +258,9 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                             <div 
                               key={fIdx} 
                               className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm text-sm text-slate-700 leading-relaxed"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(formula) }}
-                            />
+                            >
+                              <Markdown text={formula} />
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -277,7 +275,7 @@ export function ConceptViewerModal({ classId, subjectId, chapterId, chapterTitle
                           {concept.misconceptions.map((misc, mIdx) => (
                             <li key={mIdx} className="flex gap-3 text-sm text-slate-700 bg-white p-4 rounded-xl border border-rose-100/50 shadow-sm leading-relaxed">
                               <span className="text-rose-400 shrink-0 mt-0.5">⊗</span>
-                              <span dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(misc) }} />
+                              <Markdown text={misc} as="span" />
                             </li>
                           ))}
                         </ul>

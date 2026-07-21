@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChapterInput, allocatePeriods, calculateAvailablePeriods } from '../lib/scheduling';
-import { MOCK_TIMETABLE, MOCK_EVENTS } from '../lib/data';
+import { MOCK_TIMETABLE, MOCK_EVENTS } from '../lib/gateway-mock';
 import { useTeacher } from '../components/TeacherContext';
 import { getTeacherAssignments, getSubjectOutline, saveRoadmapPlan, getAllTimetableSlots } from '../lib/gateway';
 import type { TeacherAssignment, SubjectOutline } from '../lib/models';

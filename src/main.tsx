@@ -5,7 +5,6 @@ import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TeacherProvider } from './components/TeacherContext';
 import { TeacherSelector } from './components/TeacherSelector';
-import 'katex/dist/katex.min.css';
 import './styles.css';
 
 import { registerSW } from 'virtual:pwa-register';

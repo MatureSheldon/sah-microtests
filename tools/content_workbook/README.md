@@ -118,5 +118,10 @@ Use this context-first gate instead:
 7. Save approved decisions as `subject-strategy.md`, create
    `subject-blueprint.md`, generate Chapter 1 only, and run schema/content
    validation plus repetition/pedagogy quality checks.
-8. Ask for Chapter 1 content-quality approval. Generate remaining chapters only
+8. Fill `chapter-01-quality-gate.md` before asking for approval. The gate should
+   record PASS/REVISE status for source grounding, textbook feel, concepts,
+   lesson phases, teacher notes, homework, questions, subject question style,
+   worked examples, assets, cross-connections, sensitivity, retrievability,
+   repetition control, and token discipline.
+9. Ask for Chapter 1 content-quality approval. Generate remaining chapters only
    after explicit approval, validating after each chapter.

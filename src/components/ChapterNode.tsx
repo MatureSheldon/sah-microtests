@@ -1,5 +1,12 @@
-import { Chapter } from '../lib/data';
-
+export type ChapterState = 'done' | 'active' | 'upcoming';
+export interface Chapter {
+  no: string;
+  title: string;
+  state: ChapterState;
+  meta: string;
+  progress: number;
+  priority?: boolean;
+}
 export function ChapterNode({ chapter }: { chapter: Chapter }) {
   const isDone = chapter.state === "done";
   const isActive = chapter.state === "active";

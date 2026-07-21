@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getLessonPlan } from '../lib/gateway';
-import { MOCK_LESSON_PLANS } from '../lib/data';
+import { MOCK_LESSON_PLANS } from '../lib/gateway-mock';
 import type { LessonPlan } from '../lib/models';
 
 export function LessonPlanDetail() {

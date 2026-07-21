@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getHomework } from '../lib/gateway';
 import type { HomeworkSet, HomeworkItem } from '../lib/models';
-import { renderMarkdownToHtml } from '../lib/utils';
+import { Markdown } from './Markdown';
 import { GeoJsonMap } from './GeoJsonMap';
 import { MermaidDiagram } from './MermaidDiagram';
 
@@ -43,16 +43,16 @@ function HomeworkItemCard({ item, idx, showAnswers }: { item: HomeworkItem; idx:
           {item.marks} mark{item.marks !== 1 ? 's' : ''} • {item.difficulty}
         </span>
       </div>
-      <div className="text-sm text-slate-800 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.question_text) }} />
+      <Markdown text={item.question_text} className="text-sm text-slate-800 leading-relaxed font-medium" />
       <HomeworkAsset item={item} />
       {showAnswers && item.answer && (
         <div className="mt-4 p-3 bg-emerald-50/50 border border-emerald-100 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <span className="text-[10px] font-bold text-emerald-600 tracking-wider uppercase mb-1 block">Answer</span>
-          <div className="text-sm text-emerald-900 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.answer) }} />
+          <Markdown text={item.answer} className="text-sm text-emerald-900 leading-relaxed" />
           {item.explanation && (
             <div className="mt-3 pt-3 border-t border-emerald-200/50">
               <span className="text-[10px] font-bold text-emerald-600 tracking-wider uppercase mb-1 block">Explanation</span>
-              <div className="text-sm text-emerald-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.explanation) }} />
+              <Markdown text={item.explanation} className="text-sm text-emerald-800 leading-relaxed" />
             </div>
           )}
         </div>

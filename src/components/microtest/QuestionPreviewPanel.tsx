@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderMarkdownToHtml } from '../../lib/utils';
+import { Markdown } from '../Markdown';
 import { Question } from '../../lib/bank';
 import { MermaidDiagram } from '../MermaidDiagram';
 import { GeoJsonMap } from '../GeoJsonMap';
@@ -134,7 +134,7 @@ export function QuestionPreviewPanel({ state, filtering }: Props) {
                       )}
                     </div>
 
-                    <div className="text-sm text-slate-800 leading-snug mb-2" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.question) }} />
+                    <Markdown text={q.question} className="text-sm text-slate-800 leading-snug mb-2" />
                     
                     {(q.assetData || q.imageUrl) && (() => {
                       const assetFormat = String(q.assetFormat || '').trim().toLowerCase();
@@ -174,10 +174,10 @@ export function QuestionPreviewPanel({ state, filtering }: Props) {
 
                     {q.options && (
                       <div className="text-[13px] text-slate-600 leading-relaxed bg-white/60 rounded-md p-3 border border-slate-100">
-                        A. <span dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.options.A) }} /><br/>
-                        B. <span dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.options.B) }} /><br/>
-                        C. <span dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.options.C) }} /><br/>
-                        D. <span dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(q.options.D) }} />
+                        A. <Markdown text={q.options.A} as="span" /><br/>
+                        B. <Markdown text={q.options.B} as="span" /><br/>
+                        C. <Markdown text={q.options.C} as="span" /><br/>
+                        D. <Markdown text={q.options.D} as="span" />
                       </div>
                     )}
 

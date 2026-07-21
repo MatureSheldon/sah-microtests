@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MOCK_TIMETABLE } from '../lib/data';
+import { MOCK_TIMETABLE } from '../lib/gateway-mock';
 
 export function FullTimetable() {
   const [selectedTeacher, setSelectedTeacher] = useState('Mrs. Anjali Bisht');

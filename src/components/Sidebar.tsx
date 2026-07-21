@@ -1,5 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
-import { NAV } from '../lib/data';
+export interface NavItem {
+  label: string;
+  key: string;
+}
+
+export const NAV: NavItem[] = [
+  { label: "Today's Schedule", key: 'today' },
+  { label: 'Yearly Roadmap', key: 'year' },
+  { label: 'Chapter Library', key: 'chapters' },
+  { label: 'Full Timetable', key: 'timetable' },
+  { label: 'Admin Console', key: 'admin' },
+];
 import { useTeacher } from './TeacherContext';
 import { useEffect, useState } from 'react';
 import { getTeacherAssignments } from '../lib/gateway';
